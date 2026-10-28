@@ -1,0 +1,6 @@
+.venv/
+.env
+datos/
+staticfiles/
+__pycache__/
+demo/datos/

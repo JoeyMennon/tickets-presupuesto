@@ -1,0 +1,16 @@
+# Copia de prueba con datos inventados, para capturas: http://127.0.0.1:8777
+# docker compose -f compose.demo.yaml up -d --build    y para borrarla: docker compose -f compose.demo.yaml down && rm -rf demo/datos
+services:
+  demo:
+    build: .
+    image: presupuesto:latest
+    network_mode: host
+    user: "1000:1000"
+    environment:
+      HOME: /tmp
+      SECRET_KEY: solo-para-la-demo
+      DATOS_DIR: /app/demo/datos
+      PC_IP: 192.168.1.20
+    volumes:
+      - ./demo/datos:/app/demo/datos
+    command: sh -c "python manage.py migrate --noinput && (python manage.py demo || true) && exec gunicorn config.wsgi:application --bind 127.0.0.1:8777 --workers 1 --access-logfile -"

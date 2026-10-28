@@ -1,0 +1,78 @@
+{% load static %}<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Móviles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=Instrument+Serif:ital@0;1&display=swap">
+<link rel="stylesheet" href="{% static 'cuentas/calendario.css' %}?v=11">
+</head>
+<body>
+
+<header class="barra">
+  <a class="marca" href="/">✦ <span>agenda &amp; cuentas</span></a>
+  <nav class="vistas">
+    <a href="/">Mes</a>
+    <a href="{% url 'mes' %}">Plan</a>
+    <a href="{% url 'moviles' %}" class="activa">Móviles</a>
+  </nav>
+</header>
+
+<section class="titular"><h1><em>móviles</em></h1></section>
+
+{% if messages %}<div class="avisos">{% for m in messages %}<p class="aviso">{{ m }}</p>{% endfor %}</div>{% endif %}
+
+<main class="cuerpo moviles">
+  {% if nuevo %}
+  <article class="tarjeta qr-alta">
+    <p class="eti">alta de {{ nuevo.m.nombre }}</p>
+    <div class="qr">{{ nuevo.qr|safe }}</div>
+    <ol class="pasos">
+      <li>Con el móvil en la wifi de casa, abre la cámara y apunta al código.</li>
+      <li>El navegador avisará de que el certificado no es de confianza: es el del propio PC. Sigue adelante.</li>
+      <li>En Android, dentro de la página tienes el botón para instalar y conectar la app. En iPhone, usa <b>Compartir › Añadir a pantalla de inicio</b>.</li>
+    </ol>
+    <p class="nota">Sin cámara, abre este enlace en el móvil: <code class="huella">{{ nuevo.enlace }}</code></p>
+    <p class="nota">Este código solo se enseña ahora. Si lo pierdes, quita el móvil y dalo de alta otra vez.</p>
+    <p class="nota">¿No carga? El cortafuegos aún no conoce al móvil. En el PC: <code>sudo despliegue/cortafuegos-movil.sh --nuevo</code></p>
+  </article>
+  {% endif %}
+
+  <article class="tarjeta">
+    <h2>Añadir un <em>móvil</em></h2>
+    <form method="post" class="alta">
+      {% csrf_token %}
+      <input name="nombre" placeholder="Nombre, por ejemplo iPhone de Ana" maxlength="60" required>
+      <button class="anadir">Crear QR</button>
+    </form>
+    <p class="nota">Vale cualquier móvil: Android con la app o cualquiera desde el navegador.</p>
+  </article>
+
+  <article class="tarjeta">
+    <p class="eti">dados de alta</p>
+    <div class="movs">
+      {% if llave_vieja %}
+      <div class="mov"><span><b class="tag real">app</b>Llave del .env</span><span class="m-fecha">la de la primera versión</span></div>
+      {% endif %}
+      {% for m in moviles %}
+      <div class="mov">
+        <span>{{ m.nombre }} <small class="m-fecha">{% if m.ultimo_uso %}último uso {{ m.ultimo_uso|date:"d/m H:i" }}{% else %}sin usar todavía{% endif %}</small></span>
+        <form method="post" action="{% url 'borrar_movil' m.pk %}">{% csrf_token %}<button class="descartar">Quitar</button></form>
+      </div>
+      {% empty %}
+      {% if not llave_vieja %}<p class="nota">Todavía no hay ninguno.</p>{% endif %}
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="tarjeta">
+    <p class="eti">datos de conexión</p>
+    <p class="nota">Dirección: <code>{{ direccion }}</code></p>
+    <p class="nota">Huella del certificado: <code class="huella">{{ huella|default:"falta datos/tls/cert.pem" }}</code></p>
+  </article>
+</main>
+
+</body>
+</html>

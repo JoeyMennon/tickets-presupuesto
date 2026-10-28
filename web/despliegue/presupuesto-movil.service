@@ -1,0 +1,18 @@
+# Parte del móvil: solo https en 8768, con certificado propio que solo conoce la app.
+[Unit]
+Description=Presupuesto, entrada del móvil (https)
+After=network.target presupuesto.service
+
+[Service]
+Type=simple
+WorkingDirectory=__RUTA__
+Environment=DEBUG=0
+Environment=PYTHONUNBUFFERED=1
+ExecStart=__RUTA__/.venv/bin/gunicorn config.wsgi:application --bind 0.0.0.0:8768 --certfile __RUTA__/datos/tls/cert.pem --keyfile __RUTA__/datos/tls/clave.pem --workers 1 --timeout 120 --access-logfile - --error-logfile -
+Restart=always
+RestartSec=5
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=default.target

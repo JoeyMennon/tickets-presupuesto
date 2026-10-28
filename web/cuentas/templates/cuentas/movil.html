@@ -1,0 +1,83 @@
+{% load static euros %}<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f6f1ea" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#191716" media="(prefers-color-scheme: dark)">
+<title>Tickets</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tickets">
+<link rel="manifest" href="{% url 'movil_manifest' %}">
+<link rel="apple-touch-icon" href="{% static 'cuentas/icono-180.png' %}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=Instrument+Serif:ital@0;1&display=swap">
+<link rel="stylesheet" href="{% static 'cuentas/calendario.css' %}?v=11">
+</head>
+<body class="movil">
+
+<header class="m-cab">
+  <p class="eti">dinero · {{ resumen.inicio|date:"j b" }} al {{ resumen.fin|date:"j b" }}</p>
+  <p class="libre"><em>{{ resumen.libre|euros }}</em><span>libres para lo que quieras</span></p>
+  <div class="barra-din"><span style="width: {% widthratio resumen.gastado resumen.dinero 100 %}%"></span><span class="pend" style="width: {% widthratio resumen.pendiente resumen.dinero 100 %}%"></span></div>
+  <dl class="m-cifras">
+    <div><dt>Gastado</dt><dd>{{ resumen.gastado|euros }}</dd></div>
+    <div><dt>Caprichos</dt><dd>{{ resumen.caprichos|euros }}</dd></div>
+    <div><dt>Previsto</dt><dd>{{ resumen.pendiente|euros }}</dd></div>
+    <div><dt>En el banco</dt><dd>{{ resumen.queda|euros }}</dd></div>
+  </dl>
+</header>
+
+{% if messages %}<div class="avisos">{% for m in messages %}<p class="aviso">{{ m }}</p>{% endfor %}</div>{% endif %}
+
+<main class="m-cuerpo">
+  <form class="m-subir" method="post" action="{% url 'movil_subir' %}" enctype="multipart/form-data">
+    {% csrf_token %}
+    <b>Foto del ticket</b>
+    <span>Haz la foto o elige una captura o un PDF. Se lee sola en el PC.</span>
+    <span class="leyendo-txt">Leyendo el ticket…</span>
+    <input type="file" name="archivo" accept="image/jpeg,image/png,image/webp,application/pdf" aria-label="Foto del ticket" onchange="this.form.classList.add('leyendo'); this.form.submit()">
+  </form>
+
+  {% for p in pendientes %}
+  <article class="tarjeta">
+    {% with t=p.t %}
+    {% if t.archivo and t.archivo.name|lower|slice:'-4:' != '.pdf' %}
+    <a href="{% url 'archivo_ticket' t.pk %}" target="_blank"><img class="m-foto" src="{% url 'archivo_ticket' t.pk %}" alt="Foto del ticket"></a>
+    {% endif %}
+    {% include 'cuentas/_confirmar.html' with marcar=p.marcar volver='movil' %}
+    {% endwith %}
+  </article>
+  {% empty %}
+  <article class="tarjeta m-vacio">
+    <h2>Todo <em>al día</em></h2>
+    <p class="nota">No hay tickets por revisar. Los que escanees con la app aparecen aquí cuando llegan al PC.</p>
+  </article>
+  {% endfor %}
+
+  {% if hechos %}
+  <article class="tarjeta">
+    <p class="eti">últimos gastos</p>
+    <div class="movs m-hechos">
+      {% for t in hechos %}
+      <div class="mov"><span><b class="tag real">{{ t.partida }}</b>{{ t.sitio|default:"Gasto" }} <small class="m-fecha">{{ t.fecha|date:'d/m' }}{% if t.capricho and t.partida != "Caprichos" %} · {{ t.capricho|euros }} capricho{% endif %}</small></span><span class="din real">−{{ t.importe|euros }}</span></div>
+      {% endfor %}
+    </div>
+  </article>
+  {% endif %}
+  {% if android and enlace_app %}
+  <article class="tarjeta m-app">
+    <p class="eti">app para android</p>
+    <p class="nota">Con la app el ticket se guarda aunque estés fuera de casa y se pasa solo al PC al volver a la wifi.</p>
+    <div class="botones">
+      <a class="anadir" href="{% url 'movil_apk' %}">1. Instalar</a>
+      <a class="descartar" href="{{ enlace_app }}">2. Conectar la app</a>
+    </div>
+  </article>
+  {% endif %}
+</main>
+
+</body>
+</html>

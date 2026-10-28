@@ -1,0 +1,37 @@
+# Usan la red del propio PC: así el cortafuegos sigue mandando
+# y la web sabe cuándo la abres desde este ordenador.
+x-comun: &comun
+  build: .
+  image: presupuesto:latest
+  network_mode: host
+  user: "1000:1000"
+  restart: unless-stopped
+  environment:
+    HOME: /tmp
+  volumes:
+    - ./datos:/app/datos
+    - ./.env:/app/.env:ro
+
+services:
+  web:
+    <<: *comun
+    # Calendario y hojas: solo desde este PC
+    command: sh -c "python manage.py migrate --noinput && exec gunicorn config.wsgi:application --bind 127.0.0.1:8767 --workers 2 --timeout 60 --access-logfile - --error-logfile -"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8767/api/ping/', timeout=5)"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+
+  movil:
+    <<: *comun
+    # Entrada de la app: https con el certificado propio, puerto 8768
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8768 --certfile datos/tls/cert.pem --keyfile datos/tls/clave.pem --workers 1 --timeout 120 --access-logfile - --error-logfile -
+    depends_on:
+      web:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import ssl, urllib.request; urllib.request.urlopen('https://127.0.0.1:8768/api/ping/', timeout=5, context=ssl._create_unverified_context())"]
+      interval: 1m
+      timeout: 10s
+      retries: 3

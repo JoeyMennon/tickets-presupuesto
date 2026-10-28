@@ -1,0 +1,20 @@
+# Presupuesto en el PC. Solo 127.0.0.1:8767.
+[Unit]
+Description=Presupuesto de comida (local)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=__RUTA__
+Environment=DEBUG=0
+Environment=PYTHONUNBUFFERED=1
+ExecStartPre=__RUTA__/.venv/bin/python manage.py migrate --noinput
+ExecStartPre=__RUTA__/.venv/bin/python manage.py collectstatic --noinput
+ExecStart=__RUTA__/.venv/bin/gunicorn config.wsgi:application --bind 127.0.0.1:8767 --workers 2 --timeout 60 --access-logfile - --error-logfile -
+Restart=always
+RestartSec=5
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=default.target

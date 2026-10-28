@@ -1,0 +1,34 @@
+{% load euros %}<form class="confirmar" method="post" action="{% url 'guardar_ticket' t.pk %}">
+  {% csrf_token %}
+  {% if volver %}<input type="hidden" name="volver" value="{{ volver }}">{% endif %}
+  <p class="eti">{% if t.archivo %}ticket leído, revísalo{% else %}gasto nuevo{% endif %}</p>
+  {% if t.archivo %}<a class="ver-ticket" href="{% url 'archivo_ticket' t.pk %}" target="_blank">Ver el ticket ›</a>{% endif %}
+  {% if t.archivo and not t.importe %}<p class="nota">No he podido leer el total. Ponlo tú.</p>{% endif %}
+  <div class="campos">
+    <label class="grande">Total<input name="importe" inputmode="decimal" value="{{ t.importe|coma }}" placeholder="0,00" required autocomplete="off"></label>
+    <label>Día<input type="date" name="fecha" value="{{ t.fecha|date:'Y-m-d' }}"></label>
+    <label>Sitio<input name="sitio" value="{{ t.sitio }}" placeholder="Mercadona, la cafetería…" autocomplete="off"></label>
+  </div>
+  <p class="pregunta">¿De qué es?</p>
+  <div class="chips">
+    {% for p in partidas_ticket %}<label class="chip"><input type="radio" name="partida" value="{{ p }}" {% if p == t.partida %}checked{% endif %}><span>{{ p }}</span></label>{% endfor %}
+  </div>
+  {% with lineas=t.lineas.all %}{% if lineas %}
+  <p class="pregunta">¿Qué es capricho?</p>
+  <div class="chips lineas">
+    {% for l in lineas %}<label class="chip"><input type="checkbox" name="capricho" value="{{ l.pk }}" {% if l.capricho %}checked{% endif %}><span>{{ l.nombre|lower|capfirst }} <small>{{ l.importe|euros }}</small></span></label>{% endfor %}
+  </div>
+  <p class="nota">Lo marcado va a Caprichos y el resto a la partida de arriba. Si cambias alguno, me acuerdo para la próxima.</p>
+  {% endif %}{% endwith %}
+  {% if marcar %}
+  <p class="pregunta">¿Qué cosas del plan has pagado con esto?</p>
+  <div class="chips plan">
+    {% for p in marcar %}<label class="chip {{ p.tipo }}"><input type="checkbox" name="cubre" value="{{ p.clave }}" {% if p.marcado %}checked{% endif %}><span>{{ p.concepto }} <small>{{ p.dia|date:'d/m' }} · {{ p.importe|euros }}</small></span></label>{% endfor %}
+  </div>
+  <p class="nota">Lo que marques deja de contar como previsto. Si no es nada del plan, no marques nada.</p>
+  {% endif %}
+  <div class="botones">
+    <button class="anadir">Guardar</button>
+    <button class="descartar" formaction="{% url 'borrar_ticket' t.pk %}" formnovalidate>Descartar</button>
+  </div>
+</form>

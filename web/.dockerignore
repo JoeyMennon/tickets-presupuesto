@@ -1,0 +1,8 @@
+.venv/
+.env
+datos/
+staticfiles/
+**/__pycache__/
+.git/
+despliegue/
+demo/datos/

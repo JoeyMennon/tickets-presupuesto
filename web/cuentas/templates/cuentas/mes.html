@@ -1,0 +1,148 @@
+{% load static euros %}<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plan del mes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=Instrument+Serif:ital@0;1&display=swap">
+<link rel="stylesheet" href="{% static 'cuentas/calendario.css' %}?v=11">
+</head>
+<body>
+
+<header class="barra">
+  <a class="marca" href="/">✦ <span>agenda &amp; cuentas</span></a>
+  <nav class="vistas">
+    <a href="/">Calendario</a>
+    <a href="{% url 'mes' %}" class="activa">Plan</a>
+    <a href="{% url 'moviles' %}">Móviles</a>
+  </nav>
+</header>
+
+<section class="titular">
+  <h1>{% if m %}<em>{{ m.inicio|date:"j b" }}</em> al {{ m.fin|date:"j b" }}{% else %}<em>tu mes</em>{% endif %}</h1>
+</section>
+
+{% if messages %}<div class="avisos">{% for msg in messages %}<p class="aviso">{{ msg }}</p>{% endfor %}</div>{% endif %}
+
+<main class="cuerpo mes-cuerpo">
+  {% if not m %}
+  <article class="tarjeta empezar">
+    <h2>Empieza por <em>tu mes</em></h2>
+    <p class="nota">Pon cuánto cobras, el día que lo cobras y el día del siguiente cobro. Luego añades lo que ya sabes que vas a pagar.</p>
+    <form method="post" action="{% url 'mes_nuevo' %}" class="mes-datos">
+      {% csrf_token %}
+      <label>Cobro<input name="dinero" inputmode="decimal" placeholder="1200,00" required></label>
+      <label>Empieza<input type="date" name="inicio" value="{{ siguiente_inicio|date:'Y-m-d' }}" required></label>
+      <label>Siguiente cobro<input type="date" name="cobro" value="{{ siguiente_cobro|date:'Y-m-d' }}" required></label>
+      <button class="anadir">Crear el mes</button>
+    </form>
+  </article>
+  {% else %}
+
+  <div class="mes-principal">
+    {% for g in grupos %}
+    <article class="tarjeta grupo {{ g.tipo }}">
+      <div class="grupo-cab">
+        <h2>{% if g.tipo == 'fijo' %}Gastos <em>fijos</em>{% elif g.tipo == 'ocio' %}Ocio y <em>planes</em>{% else %}Comida por <em>semanas</em>{% endif %}</h2>
+        <span class="din prev">{{ g.total|euros }}</span>
+      </div>
+      <p class="nota">{% if g.tipo == 'fijo' %}Alquiler, gimnasio, suscripciones… Márcalo como pagado si ya salió del banco.{% elif g.tipo == 'ocio' %}Cafés, cine, salir. Lo que se repite, márcalo como semanal.{% else %}La compra prevista de cada semana. Los tickets del súper la van tachando.{% endif %}</p>
+
+      {% for p in g.lista %}
+      <form class="fila-prev{% if p.cubierto %} cubierto{% endif %}" method="post" action="{% url 'previsto_guardar' p.pk %}">
+        {% csrf_token %}
+        <input type="hidden" name="tipo" value="{{ p.tipo }}">
+        <input class="c-concepto" name="concepto" value="{{ p.concepto }}" aria-label="Concepto" onchange="this.form.submit()">
+        <input class="c-tienda" name="tienda" value="{{ p.tienda }}" aria-label="Tienda" onchange="this.form.submit()">
+        <input class="c-precio" name="precio" value="{{ p.precio|coma }}" inputmode="decimal" aria-label="Precio" onchange="this.form.submit()">
+        <input class="c-cant" name="cantidad" value="{{ p.cantidad }}" inputmode="numeric" aria-label="Cantidad" onchange="this.form.submit()">
+        {% if g.tipo == 'comida' %}
+        <select class="c-dia" name="dia" aria-label="Semana" onchange="this.form.submit()">
+          {% for ini, fin in semanas %}<option value="{{ ini|date:'Y-m-d' }}" {% if ini == p.dia %}selected{% endif %}>{{ ini|date:'d/m' }} al {{ fin|date:'d/m' }}</option>{% endfor %}
+        </select>
+        {% else %}
+        <input class="c-dia" type="date" name="dia" value="{{ p.dia|date:'Y-m-d' }}" min="{{ m.inicio|date:'Y-m-d' }}" max="{{ m.fin|date:'Y-m-d' }}" aria-label="Día" onchange="this.form.submit()">
+        {% endif %}
+        <label class="c-pagado" title="Ya pagado"><input type="checkbox" name="pagado" {% if p.pagado %}checked{% endif %} onchange="this.form.submit()"><span>{% if p.cubierto and not p.pagado %}con ticket{% else %}pagado{% endif %}</span></label>
+        <button class="quitar" formaction="{% url 'previsto_borrar' p.pk %}" aria-label="Quitar">×</button>
+      </form>
+      {% empty %}
+      <p class="nota vacio">Nada todavía.</p>
+      {% endfor %}
+
+      <form class="fila-prev nueva" method="post" action="{% url 'previsto_nuevo' %}">
+        {% csrf_token %}
+        <input type="hidden" name="mes" value="{{ m.pk }}">
+        <input type="hidden" name="tipo" value="{{ g.tipo }}">
+        <input class="c-concepto" name="concepto" placeholder="{% if g.tipo == 'fijo' %}Alquiler{% elif g.tipo == 'ocio' %}Café con amigos{% else %}Huevos, docena{% endif %}" required aria-label="Concepto">
+        <input class="c-tienda" name="tienda" placeholder="tienda" aria-label="Tienda">
+        <input class="c-precio" name="precio" placeholder="0,00" inputmode="decimal" required aria-label="Precio">
+        <input class="c-cant" name="cantidad" value="1" inputmode="numeric" aria-label="Cantidad">
+        {% if g.tipo == 'comida' %}
+        <select class="c-dia" name="dia" aria-label="Semana">
+          {% for ini, fin in semanas %}<option value="{{ ini|date:'Y-m-d' }}">{{ ini|date:'d/m' }} al {{ fin|date:'d/m' }}</option>{% endfor %}
+        </select>
+        {% else %}
+        <input class="c-dia" type="date" name="dia" value="{{ m.inicio|date:'Y-m-d' }}" min="{{ m.inicio|date:'Y-m-d' }}" max="{{ m.fin|date:'Y-m-d' }}" aria-label="Día">
+        {% endif %}
+        {% if g.tipo == 'ocio' %}<label class="c-pagado"><input type="checkbox" name="semanal"><span>semanal</span></label>{% else %}<span class="c-pagado"></span>{% endif %}
+        <button class="mas" aria-label="Añadir" title="Añadir">+</button>
+      </form>
+    </article>
+    {% endfor %}
+  </div>
+
+  <aside class="lado">
+    <article class="tarjeta cuentas">
+      <p class="eti">este mes</p>
+      <p class="libre"><em>{{ resumen.libre|euros }}</em><span>libres para lo que quieras</span></p>
+      <form method="post" action="/mes/?id={{ m.pk }}" class="mes-datos">
+        {% csrf_token %}
+        <label>Cobro<input name="dinero" inputmode="decimal" value="{{ m.dinero|coma }}" required></label>
+        <label>Empieza<input type="date" name="inicio" value="{{ m.inicio|date:'Y-m-d' }}" required></label>
+        <label>Siguiente cobro<input type="date" name="cobro" value="{{ m.cobro|date:'Y-m-d' }}" required></label>
+        <button class="anadir">Guardar</button>
+      </form>
+    </article>
+
+    <article class="tarjeta cuentas">
+      <p class="eti">gastado este mes</p>
+      <dl>
+        {% for partida, importe in resumen.por_partida %}<div><dt>{{ partida }}</dt><dd>{{ importe|euros }}</dd></div>{% empty %}<p class="nota">Aún nada. Los tickets que guardes salen aquí.</p>{% endfor %}
+        {% if resumen.por_partida %}<div class="total"><dt>Total</dt><dd>{{ resumen.gastado|euros }}</dd></div>{% endif %}
+      </dl>
+      <dl class="cuadre">
+        <div><dt>Cobrado</dt><dd>{{ resumen.dinero|euros }}</dd></div>
+        <div><dt>Queda en el banco</dt><dd>{{ resumen.queda|euros }}</dd></div>
+        <div><dt>Previsto por pagar</dt><dd>{{ resumen.pendiente|euros }}</dd></div>
+      </dl>
+    </article>
+
+    <article class="tarjeta">
+      <p class="eti">mes nuevo</p>
+      <form method="post" action="{% url 'mes_nuevo' %}" class="mes-datos">
+        {% csrf_token %}
+        <label>Cobro<input name="dinero" inputmode="decimal" value="{{ m.dinero|coma }}" required></label>
+        <label>Empieza<input type="date" name="inicio" value="{{ siguiente_inicio|date:'Y-m-d' }}" required></label>
+        <label>Siguiente cobro<input type="date" name="cobro" value="{{ siguiente_cobro|date:'Y-m-d' }}" required></label>
+        <label class="marcar"><input type="checkbox" name="copiar" checked> Copiar lo previsto de este mes</label>
+        <button class="anadir">Crear</button>
+      </form>
+    </article>
+
+    {% if meses|length > 1 %}
+    <article class="tarjeta">
+      <p class="eti">meses</p>
+      <div class="movs lista-meses">
+        {% for x in meses %}<a class="mov{% if x.pk == m.pk %} activo{% endif %}" href="/mes/?id={{ x.pk }}"><span>{{ x }}</span><span class="din">{{ x.dinero|euros }}</span></a>{% endfor %}
+      </div>
+    </article>
+    {% endif %}
+  </aside>
+  {% endif %}
+</main>
+
+</body>
+</html>

@@ -1,0 +1,189 @@
+{% load static euros %}<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agenda y cuentas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=Instrument+Serif:ital@0;1&display=swap">
+<link rel="stylesheet" href="{% static 'cuentas/calendario.css' %}?v=11">
+</head>
+<body>
+
+<header class="barra">
+  <a class="marca" href="/">✦ <span>agenda &amp; cuentas</span></a>
+  <nav class="vistas">
+    <a href="/?m={{ mes.anio }}-{{ mes.mes_n|stringformat:'02d' }}&d={{ dia.fecha|date:'Y-m-d' }}" class="{% if vista == 'mes' %}activa{% endif %}">Mes</a>
+    <a href="/?vista=anio&m={{ mes.anio }}-{{ mes.mes_n|stringformat:'02d' }}&d={{ dia.fecha|date:'Y-m-d' }}" class="{% if vista == 'anio' %}activa{% endif %}">Año</a>
+    <a href="{% url 'mes' %}">Plan</a>
+    <a href="{% url 'moviles' %}">Móviles</a>
+  </nav>
+</header>
+
+<section class="titular">
+  <h1>{% if vista == 'anio' %}<em>{{ mes.anio }}</em>{% else %}<em>{{ mes.mes_nombre }}</em> {{ mes.anio }}{% endif %}</h1>
+  <div class="flechas">
+    {% if vista == 'anio' %}
+    <a href="/?vista=anio&m={{ mes.anio|add:'-1' }}-01" aria-label="Año anterior">‹</a>
+    <a class="hoy" href="/?vista=anio">Hoy</a>
+    <a href="/?vista=anio&m={{ mes.anio|add:'1' }}-01" aria-label="Año siguiente">›</a>
+    {% else %}
+    <a href="/?m={{ mes.anterior }}&d={{ dia.fecha|date:'Y-m-d' }}" aria-label="Mes anterior">‹</a>
+    <a class="hoy" href="/">Hoy</a>
+    <a href="/?m={{ mes.siguiente }}&d={{ dia.fecha|date:'Y-m-d' }}" aria-label="Mes siguiente">›</a>
+    {% endif %}
+  </div>
+</section>
+
+{% if vista == 'mes' %}
+<nav class="meses">
+  {% for m in mes.meses %}<a href="/?m={{ m.clave }}&d={{ dia.fecha|date:'Y-m-d' }}" class="{% if m.activo %}activo{% endif %}">{{ m.nombre }}</a>{% endfor %}
+</nav>
+{% endif %}
+
+{% if messages %}<div class="avisos">{% for m in messages %}<p class="aviso">{{ m }}</p>{% endfor %}</div>{% endif %}
+
+<main class="cuerpo">
+  {% if vista == 'anio' %}
+  <section class="anio">
+    {% for m in anio %}
+    <a class="mini {% if m.actual %}actual{% endif %}" href="/?m={{ m.clave }}&d={{ m.clave }}-01">
+      <h3>{{ m.nombre }}</h3>
+      <div class="mini-cab">{% for d in dias_cab %}<span>{{ d|first }}</span>{% endfor %}</div>
+      {% for semana in m.semanas %}
+      <div class="mini-sem">
+        {% for d in semana %}<span class="{% if d.fuera %}fuera{% endif %}{% if d.hoy %} hoy{% endif %}">{% if not d.fuera %}{{ d.fecha.day }}{% if d.evento or d.dinero %}<i>{% if d.evento %}<b class="p-ev"></b>{% endif %}{% if d.dinero %}<b class="p-din"></b>{% endif %}</i>{% endif %}{% endif %}</span>{% endfor %}
+      </div>
+      {% endfor %}
+    </a>
+    {% endfor %}
+  </section>
+  {% else %}
+  <section class="mes">
+    <div class="rejilla cab">
+      <span class="sem">sem</span>
+      {% for d in dias_cab %}<span>{{ d }}</span>{% endfor %}
+      <span class="tot">semana</span>
+    </div>
+    {% for s in mes.semanas %}
+    <div class="rejilla fila {% if s.actual %}actual{% endif %}">
+      <span class="sem">{{ s.numero }}</span>
+      {% for d in s.dias %}
+      <a class="dia{% if d.fuera %} fuera{% endif %}{% if d.hoy %} hoy{% endif %}{% if d.elegido %} elegido{% endif %}{% if d.finde %} finde{% endif %}"
+         href="/?d={{ d.fecha|date:'Y-m-d' }}&m={{ mes.anio }}-{{ mes.mes_n|stringformat:'02d' }}">
+        <span class="num">{{ d.fecha.day }}</span>
+        <span class="evs">
+          {% for e in d.eventos|slice:":3" %}<span class="pill {{ e.color }}{% if e.hecho %} hecho{% endif %}">{% if e.hora %}{{ e.hora|time:'H:i' }} {% endif %}{{ e.titulo }}</span>{% endfor %}
+          {% if d.eventos|length > 3 %}<span class="mas">+{{ d.eventos|length|add:'-3' }}</span>{% endif %}
+        </span>
+        <span class="puntos">{% for e in d.eventos|slice:":3" %}<b class="{{ e.color }}"></b>{% endfor %}{% if d.real or d.previsto %}<b class="p-din"></b>{% endif %}</span>
+        {% if d.real or d.previsto %}
+        <span class="dinero">
+          {% if d.real %}<span class="din real">−{{ d.real|euros }}</span>{% endif %}
+          {% if d.previsto %}<span class="din prev">{{ d.previsto|euros }}</span>{% endif %}
+        </span>
+        {% endif %}
+      </a>
+      {% endfor %}
+      <span class="tot">
+        {% if s.real %}<span class="din real">−{{ s.real|euros }}</span>{% endif %}
+        {% if s.previsto %}<span class="din prev">{{ s.previsto|euros }}</span>{% endif %}
+      </span>
+    </div>
+    {% endfor %}
+    <p class="leyenda"><span class="din real">gastado</span><span class="din prev">previsto</span></p>
+  </section>
+  {% endif %}
+
+  <aside class="lado">
+    {% if por_revisar and not dia.borrador %}
+    <article class="tarjeta revisar">
+      <p class="eti">desde el móvil</p>
+      <h2>{{ por_revisar|length }} ticket{{ por_revisar|length|pluralize }} <em>por revisar</em></h2>
+      <ul>
+        {% for t in por_revisar %}<li><a href="/?ticket={{ t.pk }}&m={{ t.fecha|date:'Y-m' }}"><span>{{ t.sitio|default:"Ticket" }} · {{ t.fecha|date:'d/m' }}</span><b>{% if t.importe is not None %}{{ t.importe|euros }}{% else %}¿?{% endif %}</b></a></li>{% endfor %}
+      </ul>
+    </article>
+    {% endif %}
+    <article class="tarjeta dia-sel">
+      <p class="eti">{% if dia.fecha == hoy %}hoy{% else %}día elegido{% endif %}</p>
+      <h2>{{ dia.nombre }} <em>{{ dia.fecha.day }}</em> de {{ dia.mes_nombre }}</h2>
+
+      <ul class="agenda">
+        {% for e in dia.eventos %}
+        <li class="{{ e.color }}{% if e.hecho %} hecho{% endif %}">
+          <form method="post" action="{% url 'evento_hecho' e.pk %}">{% csrf_token %}<button class="check" aria-label="Marcar hecho">{% if e.hecho %}✓{% endif %}</button></form>
+          <span class="txt">{% if e.hora %}<small>{{ e.hora|time:'H:i' }}</small>{% endif %}{{ e.titulo }}</span>
+          <form method="post" action="{% url 'borrar_evento' e.pk %}">{% csrf_token %}<button class="quitar" aria-label="Borrar">×</button></form>
+        </li>
+        {% empty %}
+        <li class="vacio">Nada apuntado todavía.</li>
+        {% endfor %}
+      </ul>
+
+      <form class="nuevo" method="post" action="{% url 'nuevo_evento' %}">
+        {% csrf_token %}
+        <input type="hidden" name="fecha" value="{{ dia.fecha|date:'Y-m-d' }}">
+        <input name="titulo" placeholder="Apuntar algo…" required maxlength="120" autocomplete="off">
+        <div class="linea">
+          <input type="time" name="hora" aria-label="Hora">
+          <div class="colores">
+            {% for valor, nombre in colores %}
+            <label class="sw {{ valor }}" title="{{ nombre }}"><input type="radio" name="color" value="{{ valor }}" {% if forloop.first %}checked{% endif %}><span></span></label>
+            {% endfor %}
+          </div>
+          <button class="anadir">Añadir</button>
+        </div>
+      </form>
+
+
+      <div class="tickets">
+        {% if dia.borrador %}
+        {% with t=dia.borrador %}
+        {% include 'cuentas/_confirmar.html' with marcar=dia.marcar volver='' %}
+        {% endwith %}
+        {% else %}
+        <form class="subir" method="post" action="{% url 'leer_ticket' %}" enctype="multipart/form-data">
+          {% csrf_token %}
+          <input type="hidden" name="fecha" value="{{ dia.fecha|date:'Y-m-d' }}">
+          <label class="soltar">
+            <input type="file" name="archivo" accept="image/png,image/jpeg,image/webp,image/tiff,application/pdf" onchange="this.form.classList.add('leyendo'); this.form.submit()">
+            <span class="icono">✦</span>
+            <span><b>Subir un ticket</b><small>Foto o PDF. Leo el total yo solo.</small></span>
+            <span class="leyendo-txt">Leyendo el ticket…</span>
+          </label>
+          <button class="sin-ticket">Apuntar un gasto sin ticket</button>
+        </form>
+        {% endif %}
+      </div>
+      {% if dia.reales or dia.previstos %}
+      <div class="movs">
+        {% for g in dia.reales %}
+        <div class="mov"><span><b class="tag real">{{ g.partida }}</b>{{ g.concepto }}{% if g.ticket.archivo %} <a class="mini-link" href="{% url 'archivo_ticket' g.ticket.pk %}" target="_blank">ticket</a>{% endif %}</span><span class="der"><span class="din real">−{{ g.importe|euros }}</span>{% if g.ticket %}<form method="post" action="{% url 'borrar_ticket' g.ticket.pk %}">{% csrf_token %}<button class="quitar" aria-label="Borrar gasto">×</button></form>{% endif %}</span></div>
+        {% endfor %}
+        {% for g in dia.previstos %}
+        <div class="mov"><span><b class="tag {{ g.tipo }}">{{ g.tipo }}</b>{{ g.concepto }}</span><span class="din prev">{{ g.importe|euros }}</span></div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </article>
+
+    <article class="tarjeta cuentas">
+      <p class="eti">dinero · {{ resumen.inicio|date:"j b" }} al {{ resumen.fin|date:"j b" }}</p>
+      <p class="libre"><em>{{ resumen.libre|euros }}</em><span>libres para lo que quieras</span></p>
+      <div class="barra-din"><span style="width: {% widthratio resumen.gastado resumen.dinero 100 %}%"></span><span class="pend" style="width: {% widthratio resumen.pendiente resumen.dinero 100 %}%"></span></div>
+      <dl>
+        <div><dt>Cobrado</dt><dd>{{ resumen.dinero|euros }}</dd></div>
+        <div><dt><i class="c-gas"></i>Gastado</dt><dd>{{ resumen.gastado|euros }}</dd></div>
+        {% if resumen.caprichos %}<div><dt>&nbsp;&nbsp;de ello, caprichos</dt><dd>{{ resumen.caprichos|euros }}</dd></div>{% endif %}
+        <div><dt><i class="c-pend"></i>Previsto por pagar</dt><dd>{{ resumen.pendiente|euros }}</dd></div>
+        <div><dt>Queda en el banco</dt><dd>{{ resumen.queda|euros }}</dd></div>
+      </dl>
+      {% if resumen.sin_mes %}<a class="ver" href="{% url 'mes' %}">Pon tu cobro y lo previsto ›</a>{% else %}<a class="ver" href="{% url 'mes' %}">Cambiar el plan ›</a>{% endif %}
+    </article>
+  </aside>
+</main>
+
+</body>
+</html>
