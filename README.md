@@ -69,10 +69,3 @@ cd android
 ```
 
 Se configura leyendo el QR del PC. Si el móvil no tiene servicios de Google, abre la galería en vez del escáner.
-
-## Pendiente
-
-- Solo lo he probado con un Redmi y con capturas de Google Wallet
-- Con fotos torcidas o con poca luz el OCR falla bastante
-- En iPhone hay que poner la dirección privada de la wifi en fija, si no cambia la MAC y el cortafuegos lo deja fuera
-- Tests
