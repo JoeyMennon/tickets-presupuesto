@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Crea el certificado propio del PC en datos/tls. Los móviles lo reconocen por su huella.
+# certificado autofirmado en datos/tls
 set -euo pipefail
 cd "$(dirname "$0")/.."
 mkdir -p datos/tls

@@ -1,5 +1,4 @@
-# Usan la red del propio PC: así el cortafuegos sigue mandando
-# y la web sabe cuándo la abres desde este ordenador.
+# red del host para que ufw siga filtrando
 x-comun: &comun
   build: .
   image: presupuesto:latest
@@ -15,7 +14,7 @@ x-comun: &comun
 services:
   web:
     <<: *comun
-    # Calendario y hojas: solo desde este PC
+    # solo desde el pc
     command: sh -c "python manage.py migrate --noinput && exec gunicorn config.wsgi:application --bind 127.0.0.1:8767 --workers 2 --timeout 60 --access-logfile - --error-logfile -"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8767/api/ping/', timeout=5)"]
@@ -25,7 +24,7 @@ services:
 
   movil:
     <<: *comun
-    # Entrada de la app: https con el certificado propio, puerto 8768
+    # la de los móviles, con https
     command: gunicorn config.wsgi:application --bind 0.0.0.0:8768 --certfile datos/tls/cert.pem --keyfile datos/tls/clave.pem --workers 1 --timeout 120 --access-logfile - --error-logfile -
     depends_on:
       web:

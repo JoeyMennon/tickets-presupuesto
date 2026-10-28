@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Solo https. El certificado del PC se comprueba por su huella, ver Certificado.kt -->
+<!-- solo https, el certificado se comprueba por huella en Certificado.kt -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="false" />
 </network-security-config>

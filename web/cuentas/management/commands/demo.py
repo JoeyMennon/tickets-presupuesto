@@ -1,7 +1,5 @@
-"""Llena una base de datos vacía con datos inventados, para probar la web o hacer capturas.
-
-Uso: DATOS_DIR=/ruta/vacia python manage.py demo
-"""
+# datos inventados para probar o hacer capturas
+# uso: DATOS_DIR=/carpeta/vacia python manage.py demo
 import uuid
 from datetime import date, time, timedelta
 from decimal import Decimal as D
@@ -16,7 +14,6 @@ from cuentas.models import CERO, Evento, Mes, Previsto, Ticket
 
 TICKETS = Path(settings.BASE_DIR) / "demo" / "tickets"
 
-# Mes inventado: día del mes, concepto, tienda, precio, cantidad
 FIJOS = [(1, "Alquiler", "", "250.00", 1, True), (1, "Abono de transporte", "", "20.00", 1, True),
          (15, "Gimnasio", "", "29.90", 1, False), (12, "Música en streaming", "", "10.99", 1, False)]
 OCIO = [(4, "Café con amigos", "6.00", True), (20, "Cine", "8.50", False)]
@@ -71,7 +68,7 @@ class Command(BaseCommand):
             Evento.objects.create(fecha=hoy + timedelta(days=dias), hora=hora, titulo=titulo, color=color,
                                   hecho=dias < 0)
 
-        # Los dos primeros ya revisados; el del súper queda por revisar, como recién llegado del móvil
+        # el del súper se queda sin revisar para las capturas
         for nombre, partida, confirmado in [("cafe.jpg", "Cafés", True), ("fruteria.jpg", "Súper", True),
                                             ("super.jpg", "Súper", False)]:
             with open(TICKETS / nombre, "rb") as f:

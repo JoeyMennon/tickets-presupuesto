@@ -18,7 +18,6 @@ import java.net.Inet4Address
 import java.net.URL
 import java.util.UUID
 
-/** Busca el PC en la wifi y le manda los tickets de la cola. */
 object Pc {
 
     data class Estado(val ip: String?, val porRevisar: Int, val enviados: Int, val enCola: Int)
@@ -29,7 +28,6 @@ object Pc {
 
     private fun llave(c: Context) = Ajustes.conexion(c)?.llave.orEmpty()
 
-    /** Conexión cifrada que solo acepta el certificado del PC. */
     private fun abrir(c: Context, url: String): HttpsURLConnection {
         val con = URL(url).openConnection() as HttpsURLConnection
         con.sslSocketFactory = Certificado.fabrica(c) ?: throw IllegalStateException("App sin conectar")
@@ -44,7 +42,6 @@ object Pc {
             caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
     }
 
-    /** Devuelve lo que contesta el PC, o null si no es él o no responde. */
     private fun ping(c: Context, ip: String, espera: Int): JSONObject? = try {
         val con = abrir(c, "${direccion(c, ip)}/api/ping/")
         con.connectTimeout = espera
@@ -69,7 +66,7 @@ object Pc {
         return ip.hostAddress?.substringBeforeLast(".")
     }
 
-    /** Primero la IP de siempre; si el router le dio otra al PC, recorre la wifi entera. */
+    // primero la ip guardada y si no responde barre la /24
     suspend fun buscar(c: Context): Pair<String, JSONObject>? = withContext(Dispatchers.IO) {
         if (!enWifi(c)) return@withContext null
         val guardada = Ajustes.conexion(c)?.ip ?: return@withContext null
@@ -115,7 +112,6 @@ object Pc {
         }
     }
 
-    /** Manda todo lo que haya en la cola. Si el PC no está, no pasa nada: se queda para luego. */
     suspend fun enviarTodo(c: Context): Estado = candado.withLock {
         withContext(Dispatchers.IO) {
             val pc = buscar(c)

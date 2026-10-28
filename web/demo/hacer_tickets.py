@@ -1,4 +1,4 @@
-"""Genera los tickets inventados de demo/tickets. Hace falta Pillow: python demo/hacer_tickets.py"""
+# genera demo/tickets, hace falta pillow
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -42,7 +42,6 @@ def hacer(nombre, tienda, calle, productos, dia):
     d = ImageDraw.Draw(papel)
     for i, (estilo, texto) in enumerate(filas):
         d.text((40, 30 + 44 * i), texto, font=fb if estilo else f, fill="#2b2b2b")
-    # Papel sobre la mesa, con un poco de sombra
     fondo = Image.new("RGB", (papel.width + 80, papel.height + 80), "#e4dccf")
     sombra = Image.new("RGB", papel.size, "#cfc5b6")
     fondo.paste(sombra, (46, 48))

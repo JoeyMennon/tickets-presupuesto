@@ -1,4 +1,3 @@
-"""Calendario: agenda de la base de datos y dinero del presupuesto."""
 import calendar
 from collections import defaultdict
 from datetime import date, timedelta
@@ -15,11 +14,10 @@ CERO = Decimal("0")
 
 
 def dinero_por_dia(hoy):
-    """Gastos reales y lo previsto que falta por pagar, agrupados por día."""
     reales, previstos = defaultdict(list), defaultdict(list)
     for t in Ticket.objects.filter(confirmado=True):
         for i, (partida, importe) in enumerate(t.partes()):
-            # El botón de borrar y el enlace al ticket van solo en la primera fila
+            # borrar y ver ticket solo en la primera fila
             reales[t.fecha].append({"concepto": t.sitio or "Ticket", "partida": partida,
                                     "importe": importe, "ticket": t if i == 0 else None})
     for p in compra.pendientes():
@@ -28,7 +26,6 @@ def dinero_por_dia(hoy):
 
 
 def para_marcar(fecha, sitio=""):
-    """Lo previsto cerca de ese día, para marcar qué paga el ticket."""
     salida = []
     for p in compra.pendientes():
         dias = (p.dia - fecha).days

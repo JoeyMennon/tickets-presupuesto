@@ -1,56 +1,50 @@
-# Tickets y presupuesto
+# tickets-presupuesto
 
-Haces la foto del ticket con el móvil y el PC de casa la lee, la apunta en el calendario y separa los caprichos.
+Me lo hice para llegar a fin de mes sin apuntar los gastos a mano. Hago la foto del ticket con el móvil y el PC de casa la lee, la apunta en el calendario y separa lo que es capricho.
 
-| | |
-|---|---|
-| ![Calendario](web/demo/capturas/pc-calendario.png) | ![Móvil](web/demo/capturas/movil.png) |
+Todo va dentro de la wifi de casa, no hay servidor fuera.
 
-Capturas con datos inventados.
+![Calendario](web/demo/capturas/pc-calendario.png)
 
-## Qué hace
+<img src="web/demo/capturas/movil.png" width="300" alt="Ticket leído en el móvil">
 
-- Lee tickets con OCR: total, fecha, tienda y productos
-- Separa los caprichos de la comida y aprende de lo que corriges
-- Plan del mes: cobro, fijos, ocio y compra por semanas
-- Calendario con agenda, gastado y previsto por día
-- Cualquier móvil: app Android o la web desde el navegador, también iPhone
-- Todo se queda en tu wifi: https con certificado propio, llave por móvil y cortafuegos por MAC
+Las capturas son de la demo, con datos inventados.
 
-## Partes
+## Lo que hace
 
-| Carpeta | Qué es |
-|---|---|
-| `web/` | Django, SQLite y Tesseract, en Docker |
-| `android/` | App en Kotlin y Compose: escanea, guarda en cola y manda al PC al llegar a casa |
+- Lee el ticket con Tesseract: total, fecha, tienda y productos
+- Marca los caprichos con una lista y se acuerda de lo que le corriges
+- Plan del mes: lo que cobras, fijos, ocio y la compra de cada semana
+- App Android que guarda los tickets si estás fuera y los manda al llegar a casa
+- Desde iPhone o cualquier otro móvil va por el navegador
 
-## Arrancar
+## Montarlo
 
 ```bash
 cd web
-cp .env.example .env
+cp .env.example .env    # cambia SECRET_KEY
 ./despliegue/certificado.sh
 docker compose up -d --build
 ```
 
-- PC: http://127.0.0.1:8767
-- Móviles: pestaña **Móviles**, crear QR y escanearlo con el móvil en la misma wifi
-- Opcional, cortafuegos por MAC con ufw: `sudo despliegue/cortafuegos-movil.sh --nuevo`
+La web queda en http://127.0.0.1:8767. Para añadir un móvil, pestaña Móviles, creas un QR y lo escaneas con el móvil en la misma wifi. El navegador se queja del certificado porque es autofirmado, es normal.
 
-## Probar con datos inventados
+Si usas ufw, `sudo despliegue/cortafuegos-movil.sh --nuevo` deja entrar solo a los móviles que des de alta.
 
-```bash
-cd web
-docker compose -f compose.demo.yaml up -d --build
-```
+Para verlo con datos de mentira: `docker compose -f compose.demo.yaml up -d --build` y abrir http://127.0.0.1:8777
 
-Abre http://127.0.0.1:8777
-
-## App Android
+## App
 
 ```bash
 cd android
 ./gradlew assembleDebug
 ```
 
-Se conecta leyendo el QR del PC. Sin servicios de Google, abre la galería en vez del escáner.
+Se configura leyendo el QR del PC. Si el móvil no tiene servicios de Google, abre la galería en vez del escáner.
+
+## Pendiente
+
+- Solo lo he probado con un Redmi y con capturas de Google Wallet
+- Con fotos torcidas o con poca luz el OCR falla bastante
+- En iPhone hay que poner la dirección privada de la wifi en fija, si no cambia la MAC y el cortafuegos lo deja fuera
+- Tests

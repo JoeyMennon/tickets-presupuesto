@@ -3,11 +3,7 @@ package es.joel.tickets
 import android.content.Context
 import android.net.Uri
 
-/**
- * Con qué PC habla la app: dirección, llave y huella del certificado.
- * Llegan con el enlace tickets://alta del QR que se crea en el PC, en Móviles.
- * Si se compiló con secretos.properties, eso vale hasta que se lea un QR.
- */
+// ip, llave y huella del pc. llegan con el enlace tickets://alta del QR
 object Ajustes {
 
     data class Conexion(val ip: String, val puerto: Int, val llave: String, val huella: String)
@@ -24,7 +20,7 @@ object Ajustes {
         return Conexion(ip, puerto, llave, huella.lowercase())
     }
 
-    /** tickets://alta?u=https://IP:PUERTO&k=LLAVE&h=HUELLA */
+    // tickets://alta?u=https://IP:PUERTO&k=LLAVE&h=HUELLA
     fun desdeEnlace(c: Context, enlace: Uri): Boolean {
         if (enlace.scheme != "tickets" || enlace.host != "alta") return false
         val dir = Uri.parse(enlace.getQueryParameter("u") ?: return false)
@@ -40,6 +36,5 @@ object Ajustes {
         return true
     }
 
-    /** El PC cambió de IP en la wifi: se guarda la nueva. */
     fun nuevaIp(c: Context, ip: String) = prefs(c).edit().putString("ip", ip).apply()
 }

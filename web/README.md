@@ -1,31 +1,20 @@
-# Presupuesto
+# web
 
-Presupuesto hasta el próximo cobro, con agenda y tickets leídos del móvil.
+Django con SQLite. En Docker van dos servicios con la red del host:
 
-- Web: http://127.0.0.1:8767, solo desde el PC
-- Móviles: https en el puerto 8768, cada uno con su llave del QR de **Móviles**
-- Cobro y previstos: pestaña **Plan**, en la base de datos
-- Caprichos de serie: `cuentas/clasificador.py`
-- Copia de prueba con datos inventados: `docker compose -f compose.demo.yaml up -d`, en http://127.0.0.1:8777
+| Servicio | Puerto | Para qué |
+|---|---|---|
+| web | 127.0.0.1:8767 | el PC |
+| movil | 8768, https | los móviles, con llave |
 
-## Docker
+Comandos que más uso:
 
-| Qué | Comando |
-|---|---|
-| Arrancar | `docker compose up -d` |
-| Ver estado | `docker compose ps` |
-| Ver logs | `docker compose logs -f` |
-| Reiniciar | `docker compose restart` |
-| Tras cambiar código | `docker compose up -d --build` |
-| Parar | `docker compose down` |
+```bash
+docker compose up -d --build    # tras cambiar código
+docker compose logs -f
+```
 
-- Red del PC: el cortafuegos sigue mandando
-- `datos/` y `.env` van montados: base de datos, tickets y certificado
-- Certificado: `despliegue/certificado.sh`
-- Cortafuegos: `sudo despliegue/cortafuegos-movil.sh <MAC>`, `--nuevo`, `--lista`, `--sacar <MAC>` o `--quitar`
-
-| Pestaña | Contenido |
-|---|---|
-| Calendario | agenda, gastos y previstos por día; tickets por revisar |
-| Plan | cobro, fijos, ocio, comida por semanas y lo gastado por partida |
-| Móviles | alta por QR y llaves de cada móvil |
+- `cuentas/lector.py` lee los tickets
+- `cuentas/clasificador.py` decide qué es capricho
+- `cuentas/llave.py` filtra lo que llega de la wifi
+- `despliegue/` certificado, cortafuegos y servicios de systemd si no quieres Docker

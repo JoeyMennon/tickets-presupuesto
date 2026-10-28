@@ -1,6 +1,6 @@
 FROM python:3.14-slim
 
-# Lector de tickets: fotos con tesseract en español e inglés, PDF con pdftotext
+# tesseract para las fotos y pdftotext para los pdf
 RUN apt-get update \
  && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa tesseract-ocr-eng poppler-utils tzdata \
  && rm -rf /var/lib/apt/lists/*

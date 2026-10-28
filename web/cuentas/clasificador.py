@@ -1,11 +1,8 @@
-"""Decide si un producto del ticket es comida o capricho.
-
-Primero mira lo que has corregido alguna vez y, si no, una lista de serie.
-"""
+# primero lo que has corregido tú, si no la lista de serie
 import re
 import unicodedata
 
-# Palabras de capricho. Se buscan como palabra entera o como principio de palabra.
+# se buscan como palabra entera o como principio de palabra
 CAPRICHOS = [
     # dulces
     r"CHOCOLAT", r"CHOCO\.?\s*(NEGRO|LECHE|BLANCO|AVELL|NEGR|CRUJ)", r"BOMBON", r"TRUFA",
@@ -31,7 +28,6 @@ _PATRON = re.compile(r"\b(" + "|".join(CAPRICHOS) + r")")
 
 
 def normalizar(nombre):
-    """Mayúsculas, sin tildes ni cantidades, para que el mismo producto dé la misma clave."""
     sin_tildes = "".join(c for c in unicodedata.normalize("NFD", nombre) if unicodedata.category(c) != "Mn")
     limpio = re.sub(r"[^A-Z& ]", " ", sin_tildes.upper())
     palabras = [p for p in limpio.split() if len(p) > 1 or p == "&"]
@@ -52,7 +48,6 @@ def es_capricho(nombre):
 
 
 def aprender(nombre, capricho):
-    """Guarda la corrección solo si cambia lo que haría de serie o lo que ya sabía."""
     from .models import Producto
     clave = normalizar(nombre)
     if not clave:

@@ -10,10 +10,7 @@ import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLSocketFactory
 import javax.net.ssl.X509TrustManager
 
-/**
- * La app solo habla con un aparato cuyo certificado tenga la huella SHA-256 del QR.
- * Si otro se hace pasar por el PC, la conexión se corta antes de mandar la llave.
- */
+// el cert del pc es autofirmado: se fija por su huella sha-256, que llega en el QR
 object Certificado {
 
     @Volatile private var cache: Pair<String, SSLSocketFactory>? = null
@@ -50,7 +47,6 @@ object Certificado {
         return ssl.socketFactory.also { cache = esperada to it }
     }
 
-    /** La IP del PC puede cambiar; lo que vale es que el certificado sea exactamente el nuestro. */
     fun verificador(c: Context) = HostnameVerifier { _, sesion ->
         esElNuestro(c, sesion.peerCertificates.firstOrNull() as? X509Certificate)
     }

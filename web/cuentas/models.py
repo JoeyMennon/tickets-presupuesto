@@ -7,7 +7,6 @@ from django.db import models
 
 
 class Mes(models.Model):
-    """Lo que hay que estirar de un cobro al siguiente."""
 
     inicio = models.DateField()
     cobro = models.DateField(help_text="Día del siguiente cobro; el mes acaba el día anterior")
@@ -29,7 +28,7 @@ class Mes(models.Model):
         return cls.objects.filter(inicio__lte=hoy, cobro__gt=hoy).first() or cls.objects.first()
 
     def semanas(self):
-        """Tramos de 7 días desde el inicio; lo que sobra al final va con la última."""
+        # semanas de 7 días desde el cobro, lo que sobra va con la última
         tramos, dia = [], self.inicio
         while dia <= self.fin:
             hasta = dia + timedelta(days=6)
@@ -41,7 +40,6 @@ class Mes(models.Model):
 
 
 class Previsto(models.Model):
-    """Gasto que se espera en el mes: un fijo, un plan de ocio o la compra de una semana."""
 
     FIJO, OCIO, COMIDA = "fijo", "ocio", "comida"
     TIPOS = [(FIJO, "Fijo"), (OCIO, "Ocio"), (COMIDA, "Comida")]
@@ -67,7 +65,6 @@ class Previsto(models.Model):
 
     @property
     def clave(self):
-        """Lo que guarda el ticket que lo paga, en Ticket.cubre."""
         return f"p{self.pk}"
 
 
@@ -75,7 +72,6 @@ CERO = Decimal("0.00")
 
 
 class Evento(models.Model):
-    """Cosa de la agenda en un día."""
 
     COLORES = [
         ("salvia", "Salvia"),
@@ -100,7 +96,6 @@ class Evento(models.Model):
 
 
 class Ticket(models.Model):
-    """Gasto real apuntado desde el calendario, con su foto o PDF si lo hay."""
 
     PARTIDAS = ["Súper", "Caprichos", "Cafés", "Comida fuera", "Ocio", "Pan", "Fijo", "Otro"]
 
@@ -128,7 +123,6 @@ class Ticket(models.Model):
         return [c for c in self.cubre.splitlines() if c]
 
     def partes(self):
-        """El ticket partido en lo de su partida y lo de caprichos, para contarlo por separado."""
         total = self.importe or CERO
         capricho = min(self.capricho or CERO, total) if total > 0 else CERO
         if self.partida == "Caprichos" or capricho <= 0:
@@ -138,7 +132,6 @@ class Ticket(models.Model):
 
 
 class LineaTicket(models.Model):
-    """Un producto leído del ticket."""
 
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name="lineas")
     nombre = models.CharField(max_length=80)
@@ -150,7 +143,6 @@ class LineaTicket(models.Model):
 
 
 class Producto(models.Model):
-    """Lo que has corregido: este producto es o no es capricho."""
 
     clave = models.CharField(max_length=80, unique=True)
     capricho = models.BooleanField()
@@ -160,7 +152,7 @@ class Producto(models.Model):
 
 
 class Movil(models.Model):
-    """Móvil dado de alta con el QR del PC. Solo se guarda la huella de su llave."""
+    # solo se guarda el hash de la llave
 
     nombre = models.CharField(max_length=60)
     huella = models.CharField(max_length=64, unique=True)
@@ -179,6 +171,6 @@ class Movil(models.Model):
 
     @classmethod
     def nuevo(cls, nombre):
-        """Crea el móvil y devuelve la llave, que solo se ve esta vez."""
+        # la llave solo se ve aquí, luego solo queda el hash
         llave = secrets.token_urlsafe(32)
         return cls.objects.create(nombre=nombre, huella=cls.huella_de(llave)), llave

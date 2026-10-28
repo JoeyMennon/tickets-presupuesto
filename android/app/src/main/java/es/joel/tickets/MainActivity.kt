@@ -81,7 +81,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
-// Colores de la web del presupuesto
+// mismos colores que la web
 private class Paleta(val fondo: Color, val papel: Color, val tinta: Color, val suave: Color,
                      val linea: Color, val acento: Color, val acentoFondo: Color,
                      val salvia: Color, val salviaFondo: Color)
@@ -126,7 +126,6 @@ class MainActivity : ComponentActivity() {
         if (intent.getBooleanExtra("revisar", false)) abrirRevisar.value = true
     }
 
-    /** Enlace tickets://alta del QR del PC, o del botón «Conectar la app» de la web. */
     private fun recibirAlta(intent: Intent?) {
         val enlace = intent?.data ?: return
         if (intent.action != Intent.ACTION_VIEW) return
@@ -138,7 +137,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** Tickets que llegan desde otra app con Compartir, como el PDF del ticket digital. */
+    // compartir desde otra app, como el pdf del ticket digital
     private fun recibirCompartido(intent: Intent?) {
         if (intent?.action != Intent.ACTION_SEND) return
         @Suppress("DEPRECATION")
@@ -188,7 +187,7 @@ private fun Pantalla(
         }
     }
 
-    // Móviles sin servicios de Google: se elige la foto de la galería o de la cámara
+    // sin google play services no hay escáner, tiro de galería
     val galeria = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null && Cola.anadir(c, uri)) {
             cola = Cola.lista(c)
@@ -209,7 +208,6 @@ private fun Pantalla(
             .addOnFailureListener { galeria.launch("image/*") }
     }
 
-    // Al volver a la app, mira si el PC está
     val ciclo = LocalLifecycleOwner.current
     DisposableEffect(ciclo) {
         val obs = LifecycleEventObserver { _, e -> if (e == Lifecycle.Event.ON_RESUME) { cola = Cola.lista(c); refrescar() } }
@@ -421,7 +419,7 @@ private fun Revisar(p: Paleta, url: String, volver: () -> Unit) {
                     setBackgroundColor(android.graphics.Color.TRANSPARENT)
                     settings.javaScriptEnabled = true
                     webViewClient = object : WebViewClient() {
-                        // Solo se sigue si el certificado es exactamente el del PC de casa
+                        // autofirmado: solo seguimos si es el nuestro
                         override fun onReceivedSslError(v: WebView, h: SslErrorHandler, e: SslError) {
                             val cert = if (Build.VERSION.SDK_INT >= 29) e.certificate.x509Certificate else null
                             if (Certificado.esElNuestro(ctx, cert)) h.proceed() else h.cancel()

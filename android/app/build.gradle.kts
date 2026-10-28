@@ -6,8 +6,7 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
-// Opcional: secretos.properties con llave, pc_ip, pc_puerto y huella deja la app ya conectada.
-// Sin él, la app se conecta leyendo el QR que se crea en el PC, en Móviles.
+// secretos.properties es opcional, sin él la app se configura con el QR
 val secretos = Properties().apply {
     val f = rootProject.file("secretos.properties")
     if (f.exists()) f.inputStream().use { load(it) }

@@ -1,4 +1,3 @@
-"""Presupuesto. Desde fuera del PC solo se ve la parte del móvil y con llave."""
 import os
 from pathlib import Path
 
@@ -20,11 +19,10 @@ _cargar_env()
 
 SECRET_KEY = os.environ["SECRET_KEY"]
 DEBUG = os.environ.get("DEBUG", "0") == "1"
-# Cualquier nombre vale: quien no sea el propio PC pasa por cuentas.llave.SoloMovil
+# lo de fuera lo filtra cuentas/llave.py
 ALLOWED_HOSTS = ["*"]
 MOVIL_LLAVE = os.environ.get("MOVIL_LLAVE", "")
 PC_IP = os.environ.get("PC_IP", "")
-# Base de datos, tickets y certificado
 DATOS = Path(os.environ.get("DATOS_DIR") or BASE_DIR / "datos")
 
 INSTALLED_APPS = [

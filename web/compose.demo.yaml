@@ -1,5 +1,5 @@
-# Copia de prueba con datos inventados, para capturas: http://127.0.0.1:8777
-# docker compose -f compose.demo.yaml up -d --build    y para borrarla: docker compose -f compose.demo.yaml down && rm -rf demo/datos
+# demo con datos inventados en http://127.0.0.1:8777
+# borrarla: docker compose -f compose.demo.yaml down && rm -rf demo/datos
 services:
   demo:
     build: .

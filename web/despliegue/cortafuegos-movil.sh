@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Al puerto 8768 solo entran los móviles de la lista, por su MAC.
-# Uso con sudo:
+# al 8768 solo entran las MAC de la lista
+# con sudo:
 #   cortafuegos-movil.sh AA:BB:CC:DD:EE:FF    añade ese móvil
 #   cortafuegos-movil.sh --nuevo              busca el móvil que acaba de intentar entrar y lo añade
 #   cortafuegos-movil.sh --lista              enseña los que hay
@@ -25,7 +25,7 @@ case "$ORDEN" in
         actuales
         exit 0 ;;
     --nuevo)
-        # La regla de aviso deja en el registro del kernel quién intentó entrar sin estar en la lista
+        # la regla LOG deja en el kernel quién intentó entrar
         mapfile -t VISTOS < <(journalctl -k --since "-15min" --no-pager 2>/dev/null | grep -- "$AVISO" \
             | grep -o "MAC=[0-9a-f:]*" | cut -c5- | cut -d: -f7-12 | sort -u)
         CONOCIDOS=$(actuales)
@@ -68,7 +68,6 @@ volver_atras() {
 
 NUEVO=$(mktemp)
 trap 'rm -f "$NUEVO" "$ANTES"' EXIT
-# Parte siempre de las reglas sin nada de este script
 grep -v -- "--comment $ETIQUETA" "$REGLAS" > "$NUEVO"
 
 if [[ "$ORDEN" != "--quitar" ]]; then
@@ -88,7 +87,7 @@ open(ruta, "w").write("\n".join(lineas))
 PY
 fi
 
-# Prueba el fichero sin aplicarlo
+# probar antes de aplicar
 iptables-restore --test --noflush < "$NUEVO" || { echo "Las reglas nuevas no valen, no toco nada"; exit 1; }
 
 cp "$NUEVO" "$REGLAS"

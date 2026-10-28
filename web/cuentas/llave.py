@@ -1,4 +1,3 @@
-"""Desde la wifi solo se entra a la parte del móvil: por https, en el puerto 8768 y con la llave de un móvil dado de alta."""
 import ipaddress
 import secrets
 
@@ -11,7 +10,6 @@ DIEZ_ANIOS = 10 * 365 * 24 * 3600
 
 
 def _vale(llave):
-    """La llave vieja del .env o la de un móvil dado de alta desde el PC."""
     if not llave:
         return False
     if settings.MOVIL_LLAVE and secrets.compare_digest(llave, settings.MOVIL_LLAVE):

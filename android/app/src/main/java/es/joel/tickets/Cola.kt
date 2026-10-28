@@ -10,7 +10,6 @@ import java.util.Date
 import java.util.Locale
 import java.util.UUID
 
-/** Tickets escaneados que esperan a llegar al PC, y los últimos enviados. */
 object Cola {
 
     data class Item(val archivo: File, val uid: String, val fecha: String)
@@ -21,7 +20,7 @@ object Cola {
 
     private fun hoy() = SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).format(Date())
 
-    /** Copia el escaneo a la cola. El nombre guarda el id y el día: uid__fecha.ext */
+    // nombre: uid__fecha.ext
     fun anadir(c: Context, uri: Uri, extension: String = "jpg"): Boolean {
         val destino = File(carpeta(c), "${UUID.randomUUID()}__${hoy()}.$extension")
         return try {

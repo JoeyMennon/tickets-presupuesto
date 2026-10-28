@@ -22,7 +22,7 @@ from . import lector
 from .models import CERO, Evento, Mes, Movil, Previsto, Ticket
 
 def _importe(texto):
-    """Acepta '3,91', '3.91' o '3,91 €'."""
+    # vale '3,91', '3.91' o '3,91 €'
     try:
         valor = Decimal((texto or "").replace("€", "").replace(" ", "").replace(",", "."))
     except InvalidOperation:
@@ -37,7 +37,7 @@ def _fecha(texto):
         return None
 
 
-# Mes: lo que se cobra y lo previsto. Todo se guarda en la base de datos
+# --- plan del mes ---
 
 def _mes_elegido(request):
     pk = request.GET.get("id") or request.POST.get("mes")
@@ -82,7 +82,6 @@ def mes(request):
 
 
 def _mismo_dia_mes_siguiente(fecha):
-    """El mismo día del mes siguiente; si no existe, como el 31, el último de ese mes."""
     anio, mes_n = (fecha.year + 1, 1) if fecha.month == 12 else (fecha.year, fecha.month + 1)
     for dia in range(fecha.day, 27, -1):
         try:
@@ -94,7 +93,6 @@ def _mismo_dia_mes_siguiente(fecha):
 
 @require_POST
 def mes_nuevo(request):
-    """Empieza un mes. Si se pide, copia lo previsto del mes anterior moviendo las fechas."""
     dinero = _importe(request.POST.get("dinero"))
     inicio = _fecha(request.POST.get("inicio"))
     cobro = _fecha(request.POST.get("cobro"))
@@ -141,7 +139,7 @@ def previsto_nuevo(request):
     if datos is None:
         messages.error(request, "Pon qué es, cuánto cuesta y el día.")
         return _volver_mes(m)
-    # Ocio que se repite: una vez por semana hasta el final del mes
+    # semanal: uno cada 7 días hasta fin de mes
     dias = [datos["dia"]]
     if datos["tipo"] == Previsto.OCIO and request.POST.get("semanal"):
         while dias[-1] + timedelta(days=7) <= m.fin:
@@ -237,7 +235,7 @@ def borrar_evento(request, pk):
 
 
 def _importe_con_signo(texto):
-    """Como _importe pero deja poner negativos para Bizum recibidos o devoluciones."""
+    # con negativos, para los bizum que te devuelven
     texto = (texto or "").strip()
     negativo = texto.startswith("-") or texto.startswith("−")
     valor = _importe(texto.lstrip("-−"))
@@ -318,7 +316,7 @@ def archivo_ticket(request, pk):
     return FileResponse(t.archivo.open("rb"))
 
 
-# Parte del móvil. Desde la wifi solo se llega aquí con la llave, ver cuentas/llave.py
+# --- móvil ---
 
 def api_ping(request):
     pendientes = Ticket.objects.filter(confirmado=False, origen="movil").count()
@@ -361,7 +359,7 @@ def movil(request):
 
 
 def movil_manifest(request):
-    """Para añadirla a la pantalla de inicio. Lleva la llave porque allí no llegan las cookies del navegador."""
+    # en iphone la app de inicio no ve las cookies de safari, por eso va la llave
     from django.templatetags.static import static
     inicio = "/movil/?" + urlencode({"k": _llave_de(request)})
     datos = {
@@ -374,7 +372,6 @@ def movil_manifest(request):
 
 @require_POST
 def movil_subir(request):
-    """Foto o PDF desde el navegador del móvil, para los que no tienen la app."""
     archivo = request.FILES.get("archivo")
     if not archivo:
         messages.error(request, "No ha llegado ninguna foto.")
@@ -388,13 +385,12 @@ def movil_subir(request):
     return redirect("/movil/")
 
 
-# Alta de móviles. Solo desde el propio PC: cuentas.llave.SoloMovil no deja llegar aquí desde la wifi
+# --- alta de móviles, solo desde el pc ---
 
 PUERTO_MOVIL = 8768
 
 
 def _ip_pc():
-    """IP del PC en la wifi. Se puede fijar con PC_IP en .env."""
     if settings.PC_IP:
         return settings.PC_IP
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
@@ -406,7 +402,6 @@ def _ip_pc():
 
 
 def _huella_cert():
-    """SHA-256 del certificado del PC: la app solo habla con quien lo tenga."""
     ruta = settings.MEDIA_ROOT / "tls" / "cert.pem"
     if not ruta.exists():
         return ""

@@ -32,7 +32,7 @@ class App : Application() {
     }
 }
 
-/** Cada 15 minutos con wifi mira si el PC está y le pasa la cola. */
+// cada 15 min con wifi intenta mandar la cola
 class EnvioWorker(c: Context, p: WorkerParameters) : CoroutineWorker(c, p) {
 
     override suspend fun doWork(): Result {
@@ -72,7 +72,6 @@ class EnvioWorker(c: Context, p: WorkerParameters) : CoroutineWorker(c, p) {
             WorkManager.getInstance(c).enqueueUniquePeriodicWork("envio", ExistingPeriodicWorkPolicy.KEEP, trabajo)
         }
 
-        /** En cuanto haya wifi, sin esperar a los 15 minutos. */
         fun pronto(c: Context) {
             val trabajo = OneTimeWorkRequestBuilder<EnvioWorker>().setConstraints(conWifi).build()
             WorkManager.getInstance(c).enqueueUniqueWork("envio-pronto", ExistingWorkPolicy.REPLACE, trabajo)

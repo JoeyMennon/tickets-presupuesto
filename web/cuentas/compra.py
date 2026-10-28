@@ -1,4 +1,3 @@
-"""Cuentas del mes: lo cobrado, lo gastado según los tickets y lo previsto que falta por pagar."""
 from .models import CERO, Mes, Previsto, Ticket
 
 def tickets_del_mes(mes):
@@ -10,7 +9,6 @@ def cubiertos():
 
 
 def pendientes(mes=None):
-    """Lo previsto que ni está pagado ni lo cubre ningún ticket."""
     mes = mes or Mes.actual()
     if mes is None:
         return []
@@ -40,7 +38,6 @@ def resumen(mes):
 
 
 def _por_partida(partes):
-    """Lo gastado sumado por partida, de más a menos."""
     sumas = {}
     for _, partida, importe in partes:
         sumas[partida] = sumas.get(partida, CERO) + importe
