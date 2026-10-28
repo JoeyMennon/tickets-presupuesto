@@ -1,8 +1,12 @@
 # tickets-presupuesto
 
-Me lo hice para llegar a fin de mes sin apuntar los gastos a mano. Hago la foto del ticket con el móvil y el PC de casa la lee, la apunta en el calendario y separa lo que es capricho.
+Es un presupuesto personal que se rellena solo con las fotos de los tickets.
 
-Todo va dentro de la wifi de casa, no hay servidor fuera.
+Me lo hice para llegar a fin de mes sin tener que apuntar cada gasto a mano. Al principio de mes pones lo que cobras y lo que ya sabes que vas a pagar: el alquiler, el gimnasio, los cafés de los sábados, la compra de cada semana. A partir de ahí, cada vez que compras algo haces una foto del ticket con el móvil y el PC de casa se encarga del resto: lo lee, lo apunta en el día que toca y te dice cuánto te queda libre hasta el siguiente cobro.
+
+También separa los caprichos. Si en el ticket del súper van unas patatas fritas y una tableta de chocolate, eso cuenta aparte de la comida, para que veas cuánto se va en eso al mes.
+
+Todo se queda en la wifi de casa. No hay ninguna cuenta ni servidor fuera, los datos de tu dinero no salen de tu PC.
 
 ![Calendario](web/demo/capturas/pc-calendario.png)
 
@@ -10,13 +14,37 @@ Todo va dentro de la wifi de casa, no hay servidor fuera.
 
 Las capturas son de la demo, con datos inventados.
 
-## Lo que hace
+## Cómo funciona
 
-- Lee el ticket con Tesseract: total, fecha, tienda y productos
-- Marca los caprichos con una lista y se acuerda de lo que le corriges
-- Plan del mes: lo que cobras, fijos, ocio y la compra de cada semana
-- App Android que guarda los tickets si estás fuera y los manda al llegar a casa
-- Desde iPhone o cualquier otro móvil va por el navegador
+1. **Haces la foto.** Con la app Android o desde el navegador del móvil, que vale también para iPhone. Puedes mandar una foto, una captura de pantalla como las de Google Wallet o el PDF de un ticket digital.
+2. **El PC lo lee.** Con Tesseract saca el total, la fecha, la tienda y cada producto con su precio.
+3. **Lo revisas.** El ticket aparece en el calendario como pendiente. Compruebas el total, eliges de qué es y qué productos son capricho. Si corriges alguno, se acuerda para la próxima vez.
+4. **Se apunta.** Pasa al calendario como gastado ese día y tacha lo que tenías previsto que pagaba, por ejemplo la compra de esa semana.
+
+Si haces la foto fuera de casa, la app la guarda y la manda sola cuando vuelves a la wifi.
+
+## Lo que hay en la web
+
+- **Calendario:** cada día con lo gastado, lo previsto y tu agenda. Al lado, cuánto llevas gastado y cuánto te queda libre.
+- **Plan:** lo que cobras, los gastos fijos, el ocio y la compra por semanas. Al acabar el mes, creas el siguiente copiando el anterior.
+- **Móviles:** das de alta cada móvil con un QR y lo puedes quitar cuando quieras.
+
+## Seguridad
+
+Como son datos de dinero, la idea era que nadie más pudiera verlos aunque esté en la misma wifi:
+
+- Los móviles hablan con el PC por https, con un certificado propio del PC.
+- Cada móvil tiene su llave, que llega en el QR. El PC solo guarda el hash.
+- La app comprueba la huella del certificado antes de mandar nada, así que no le vale cualquier aparato que se haga pasar por el PC.
+- Opcional, con ufw: el cortafuegos solo deja entrar a las MAC de los móviles dados de alta.
+- Desde la wifi solo se llega a la parte del móvil. El calendario y el plan solo se abren desde el propio PC.
+
+## Por dentro
+
+| Carpeta | Qué es |
+|---|---|
+| `web/` | Django con SQLite, Tesseract y pdftotext, en Docker |
+| `android/` | App en Kotlin con Compose, escáner de documentos de ML Kit y WorkManager para la cola |
 
 ## Montarlo
 
