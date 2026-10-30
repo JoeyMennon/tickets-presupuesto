@@ -3,6 +3,7 @@
 import os
 import secrets
 import shutil
+import signal
 import sys
 import threading
 import time
@@ -80,14 +81,57 @@ def abrir():
         webbrowser.open(WEB)
 
 
+INICIO = r"Software\Microsoft\Windows\CurrentVersion\Run"
+
+
+def al_iniciar(poner):
+    # que windows lo arranque solo al entrar en la sesión
+    if os.name != "nt":
+        return
+    import winreg
+    try:
+        with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, INICIO, 0, winreg.KEY_SET_VALUE) as k:
+            if poner:
+                sin_ventana = Path(sys.executable).with_name("pythonw.exe")
+                orden = f'"{sin_ventana}" -X utf8 "{Path(__file__).resolve()}" --sin-navegador'
+                winreg.SetValueEx(k, "TicketsPresupuesto", 0, winreg.REG_SZ, orden)
+            else:
+                winreg.DeleteValue(k, "TicketsPresupuesto")
+    except OSError:
+        pass
+
+
+def parar(datos):
+    al_iniciar(False)
+    pid = datos / "arrancado.pid"
+    if pid.exists() and ya_abierto():
+        try:
+            os.kill(int(pid.read_text()), signal.SIGTERM)
+        except (OSError, ValueError):
+            pass
+    pid.unlink(missing_ok=True)
+    print("Parado. No vuelve a arrancar hasta que abras Tickets otra vez.")
+
+
 def main():
+    datos = carpeta_datos()
+    if "--parar" in sys.argv:
+        parar(datos)
+        return
+    if "--sin-navegador" in sys.argv:
+        os.environ["SIN_NAVEGADOR"] = "1"
     if ya_abierto():
         print("Ya estaba abierto.")
         abrir()
         return
 
-    datos = carpeta_datos()
     datos.mkdir(parents=True, exist_ok=True)
+    # sin ventana no hay donde escribir: va a un fichero
+    if sys.stdout is None or sys.stderr is None:
+        registro = open(datos / "registro.txt", "a", encoding="utf-8", buffering=1)
+        sys.stdout = sys.stderr = registro
+    (datos / "arrancado.pid").write_text(str(os.getpid()))
+    al_iniciar(True)
     os.environ["DATOS_DIR"] = str(datos)
     os.environ.setdefault("SECRET_KEY", clave(datos))
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
@@ -122,7 +166,7 @@ def main():
 
     print(f"Abierto en {WEB}")
     print(f"Tus datos están en {datos}")
-    print("No cierres esta ventana mientras lo uses. Para pararlo, ciérrala o pulsa Ctrl+C.")
+    print("Para pararlo: Ctrl+C, o python arrancar.py --parar")
     abrir()
     try:
         while True:
@@ -132,6 +176,7 @@ def main():
     finally:
         pc.stop()
         movil.stop()
+        (datos / "arrancado.pid").unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

@@ -1,8 +1,10 @@
 Tickets presupuesto para Windows
 
-1. Doble clic en Tickets.bat
+1. Doble clic en Tickets.bat. Se abre el navegador y ya queda funcionando, sin ventanas.
 2. Si Windows pregunta por el cortafuegos, pulsa Permitir: es para que entre el móvil.
-3. Se abre el navegador. En la pestaña Móviles creas un QR y lo escaneas con el móvil, que tiene que estar en la misma wifi.
+3. En la pestaña Móviles creas un QR y lo escaneas con el móvil, que tiene que estar en la misma wifi.
 
-La ventana negra tiene que seguir abierta mientras lo uses.
-Tus datos quedan en %LOCALAPPDATA%\TicketsPresupuesto, así que puedes borrar esta carpeta y bajar una versión nueva sin perderlos.
+A partir de ahí arranca solo cada vez que enciendes el PC. Para volver a la web, doble clic otra vez en Tickets.bat.
+Para apagarlo del todo: doble clic en Parar.bat. No vuelve a arrancar hasta que abras Tickets.bat.
+
+Tus datos quedan en %LOCALAPPDATA%\TicketsPresupuesto, así que puedes borrar esta carpeta y bajar una versión nueva sin perderlos. Si mueves la carpeta, abre Tickets.bat desde el sitio nuevo.

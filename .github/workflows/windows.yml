@@ -81,7 +81,7 @@ jobs:
           python windows/podar.py "$d/poppler" pdftotext.exe
 
           Copy-Item app-debug.apk "$d/tickets.apk"
-          Copy-Item windows/Tickets.bat, windows/LEEME.txt, LICENSE $d
+          Copy-Item windows/Tickets.bat, windows/Parar.bat, windows/LEEME.txt, LICENSE $d
 
           $env:SECRET_KEY = "solo-para-construir"
           & "$d/python/python.exe" "$d/web/manage.py" collectstatic --noinput -v 0
@@ -106,17 +106,29 @@ jobs:
           # arrancarlo y llamar a las dos partes
           $env:SIN_NAVEGADOR = "1"
           $env:DATOS_DIR = "$env:RUNNER_TEMP\datos"
-          $p = Start-Process "$d/python/python.exe" -ArgumentList "-X", "utf8", "$d/web/arrancar.py" -PassThru -RedirectStandardOutput salida.txt -RedirectStandardError errores.txt
+          # como el doble clic: sin ventana
+          Start-Process "$d/python/pythonw.exe" -ArgumentList "-X", "utf8", "$d/web/arrancar.py"
           $ok = $false
           foreach ($i in 1..30) {
             Start-Sleep 2
             try { Invoke-RestMethod http://127.0.0.1:8767/api/ping/ | Out-Null; $ok = $true; break } catch {}
           }
-          Get-Content salida.txt, errores.txt
+          Get-Content "$env:DATOS_DIR\registro.txt" -ErrorAction SilentlyContinue
           if (-not $ok) { throw "no arranca" }
           Invoke-RestMethod https://127.0.0.1:8768/api/ping/ -SkipCertificateCheck
           (Invoke-WebRequest http://127.0.0.1:8767/moviles/).StatusCode
-          Stop-Process $p
+          $run = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+          (Get-ItemProperty $run).TicketsPresupuesto
+          if (-not (Get-ItemProperty $run).TicketsPresupuesto) { throw "no queda en el inicio" }
+
+          # parar
+          & "$d/python/python.exe" -X utf8 "$d/web/arrancar.py" --parar
+          Start-Sleep 3
+          $sigue = $true
+          try { Invoke-RestMethod http://127.0.0.1:8767/api/ping/ -TimeoutSec 3 | Out-Null } catch { $sigue = $false }
+          if ($sigue) { throw "no se para" }
+          if ((Get-ItemProperty $run).TicketsPresupuesto) { throw "sigue en el inicio" }
+          "parado y fuera del inicio"
 
       - name: Comprimir
         run: Compress-Archive TicketsPresupuesto TicketsPresupuesto-windows.zip

@@ -54,7 +54,7 @@ No hace falta instalar nada.
 2. Doble clic en `Tickets.bat`.
 3. Si Windows pregunta por el cortafuegos, pulsa Permitir: es para que entre el móvil.
 
-Se abre el navegador con la web. La ventana negra tiene que seguir abierta mientras lo uses. Tus datos quedan en `%LOCALAPPDATA%\TicketsPresupuesto`, así que para actualizar basta con bajar el zip nuevo.
+Se abre el navegador con la web y queda funcionando sin ventanas. Desde entonces arranca solo al encender el PC; `Parar.bat` lo apaga y lo quita del inicio. Tus datos quedan en `%LOCALAPPDATA%\TicketsPresupuesto`, así que para actualizar basta con bajar el zip nuevo.
 
 Sin Docker en Linux o Mac vale lo mismo: `pip install -r web/requirements-sin-docker.txt` y `python web/arrancar.py`, con `tesseract` y `pdftotext` instalados.
 
