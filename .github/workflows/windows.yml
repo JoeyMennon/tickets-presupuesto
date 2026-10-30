@@ -1,0 +1,133 @@
+# zip para windows: python, tesseract y poppler dentro, sin instalar nada
+name: Windows
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  PYTHON: "3.14.10"
+  TESSERACT: https://github.com/UB-Mannheim/tesseract/releases/download/v5.4.0.20240606/tesseract-ocr-w64-setup-5.4.0.20240606.exe
+  POPPLER: https://github.com/oschwartz10612/poppler-windows/releases/download/v26.09.0-0/Release-26.09.0-0.zip
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: cd android && ./gradlew assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v5
+        with:
+          name: apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+  zip:
+    needs: apk
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON }}
+      - uses: actions/download-artifact@v5
+        with:
+          name: apk
+
+      - name: Montar la carpeta
+        run: |
+          $ErrorActionPreference = "Stop"
+          $d = "TicketsPresupuesto"
+          New-Item -ItemType Directory $d | Out-Null
+
+          # python portátil
+          Invoke-WebRequest "https://www.python.org/ftp/python/$env:PYTHON/python-$env:PYTHON-embed-amd64.zip" -OutFile py.zip
+          Expand-Archive py.zip "$d/python"
+          Set-Content "$d/python/python314._pth" "python314.zip`r`n.`r`nLib\site-packages`r`n..\web`r`nimport site"
+          python -m pip install --target "$d/python/Lib/site-packages" -r web/requirements-sin-docker.txt
+
+          # la web sin lo de docker
+          Copy-Item web "$d/web" -Recurse
+          Remove-Item -Recurse "$d/web/despliegue", "$d/web/demo/capturas", "$d/web/Dockerfile", "$d/web/compose*.yaml"
+
+          # tesseract con español
+          Invoke-WebRequest $env:TESSERACT -OutFile tesseract-setup.exe
+          7z x tesseract-setup.exe "-o$d/tesseract" -y | Out-Null
+          # solo tesseract.exe, sus dll y los idiomas
+          Get-ChildItem "$d/tesseract" -Directory | Where-Object Name -ne tessdata | Remove-Item -Recurse -Force
+          Get-ChildItem "$d/tesseract" -File | Where-Object { $_.Name -ne "tesseract.exe" -and $_.Extension -ne ".dll" } | Remove-Item -Force
+          Get-ChildItem "$d/tesseract/tessdata" | Where-Object { $_.Name -notin "eng.traineddata", "osd.traineddata" } | Remove-Item -Recurse -Force
+          Invoke-WebRequest https://github.com/tesseract-ocr/tessdata_fast/raw/main/spa.traineddata -OutFile "$d/tesseract/tessdata/spa.traineddata"
+
+          # pdftotext
+          Invoke-WebRequest $env:POPPLER -OutFile poppler.zip
+          Expand-Archive poppler.zip poppler-zip
+          New-Item -ItemType Directory "$d/poppler" | Out-Null
+          $bin = (Get-ChildItem poppler-zip -Recurse -Directory -Filter bin | Where-Object { $_.Parent.Name -eq "Library" }).FullName
+          Copy-Item "$bin/pdftotext.exe", "$bin/*.dll" "$d/poppler"
+
+          python -m pip install pefile
+          python windows/podar.py "$d/tesseract" tesseract.exe
+          python windows/podar.py "$d/poppler" pdftotext.exe
+
+          Copy-Item app-debug.apk "$d/tickets.apk"
+          Copy-Item windows/Tickets.bat, windows/LEEME.txt, LICENSE $d
+
+          $env:SECRET_KEY = "solo-para-construir"
+          & "$d/python/python.exe" "$d/web/manage.py" collectstatic --noinput -v 0
+
+          # lo que más pesa
+          Get-ChildItem $d -Directory | ForEach-Object { "{0,6:N1} MB  {1}" -f ((Get-ChildItem $_ -Recurse -File | Measure-Object Length -Sum).Sum / 1MB), $_.Name }
+
+      - name: Probar
+        run: |
+          $ErrorActionPreference = "Stop"
+          $d = (Resolve-Path TicketsPresupuesto).Path
+          & "$d/tesseract/tesseract.exe" --list-langs
+          & "$d/poppler/pdftotext.exe" -v
+
+          # leer un ticket de la demo como lo haría la web
+          $env:PATH = "$d\tesseract;$d\poppler;$env:PATH"
+          $env:TESSDATA_PREFIX = "$d\tesseract\tessdata"
+          $env:OMP_THREAD_LIMIT = "1"
+          Measure-Command { & "$d/tesseract/tesseract.exe" "$d/web/demo/tickets/super.jpg" stdout --psm 4 -l spa+eng | Out-Host }
+          & "$d/python/python.exe" -X utf8 -c "from cuentas import lector; t = lector.texto(r'$d\web\demo\tickets\super.jpg'); print(t); assert t.strip()"
+
+          # arrancarlo y llamar a las dos partes
+          $env:SIN_NAVEGADOR = "1"
+          $env:DATOS_DIR = "$env:RUNNER_TEMP\datos"
+          $p = Start-Process "$d/python/python.exe" -ArgumentList "-X", "utf8", "$d/web/arrancar.py" -PassThru -RedirectStandardOutput salida.txt -RedirectStandardError errores.txt
+          $ok = $false
+          foreach ($i in 1..30) {
+            Start-Sleep 2
+            try { Invoke-RestMethod http://127.0.0.1:8767/api/ping/ | Out-Null; $ok = $true; break } catch {}
+          }
+          Get-Content salida.txt, errores.txt
+          if (-not $ok) { throw "no arranca" }
+          Invoke-RestMethod https://127.0.0.1:8768/api/ping/ -SkipCertificateCheck
+          (Invoke-WebRequest http://127.0.0.1:8767/moviles/).StatusCode
+          Stop-Process $p
+
+      - name: Comprimir
+        run: Compress-Archive TicketsPresupuesto TicketsPresupuesto-windows.zip
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: TicketsPresupuesto-windows
+          path: TicketsPresupuesto-windows.zip
+
+      - name: Publicar
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create $env:GITHUB_REF_NAME TicketsPresupuesto-windows.zip "TicketsPresupuesto/tickets.apk#tickets.apk" --generate-notes

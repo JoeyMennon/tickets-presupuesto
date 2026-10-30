@@ -46,7 +46,19 @@ Como son datos de dinero, la idea era que nadie más pudiera verlos aunque esté
 | `web/` | Django con SQLite, Tesseract y pdftotext, en Docker |
 | `android/` | App en Kotlin con Compose, escáner de documentos de ML Kit y WorkManager para la cola |
 
-## Montarlo
+## En Windows
+
+No hace falta instalar nada.
+
+1. Baja `TicketsPresupuesto-windows.zip` de la [última versión](https://github.com/JoeyMennon/tickets-presupuesto/releases/latest) y descomprímelo.
+2. Doble clic en `Tickets.bat`.
+3. Si Windows pregunta por el cortafuegos, pulsa Permitir: es para que entre el móvil.
+
+Se abre el navegador con la web. La ventana negra tiene que seguir abierta mientras lo uses. Tus datos quedan en `%LOCALAPPDATA%\TicketsPresupuesto`, así que para actualizar basta con bajar el zip nuevo.
+
+Sin Docker en Linux o Mac vale lo mismo: `pip install -r web/requirements-sin-docker.txt` y `python web/arrancar.py`, con `tesseract` y `pdftotext` instalados.
+
+## Montarlo con Docker
 
 ```bash
 cd web

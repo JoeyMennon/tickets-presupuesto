@@ -1,0 +1,8 @@
+Tickets presupuesto para Windows
+
+1. Doble clic en Tickets.bat
+2. Si Windows pregunta por el cortafuegos, pulsa Permitir: es para que entre el móvil.
+3. Se abre el navegador. En la pestaña Móviles creas un QR y lo escaneas con el móvil, que tiene que estar en la misma wifi.
+
+La ventana negra tiene que seguir abierta mientras lo uses.
+Tus datos quedan en %LOCALAPPDATA%\TicketsPresupuesto, así que puedes borrar esta carpeta y bajar una versión nueva sin perderlos.
