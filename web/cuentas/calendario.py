@@ -25,12 +25,17 @@ def dinero_por_dia(hoy):
     return reales, previstos
 
 
-def para_marcar(fecha, sitio=""):
+def para_marcar(fecha, sitio="", ticket=None):
+    editando = ticket is not None and ticket.confirmado
+    ya = set(ticket.claves()) if editando else set()
     salida = []
-    for p in compra.pendientes():
+    for p in compra.pendientes(excepto=ticket if editando else None):
         dias = (p.dia - fecha).days
-        if -13 <= dias <= 6:
-            p.marcado = bool(sitio) and sitio.lower() in p.concepto.lower() and abs(dias) <= 6
+        if p.clave in ya or -13 <= dias <= 6:
+            if editando:
+                p.marcado = p.clave in ya
+            else:
+                p.marcado = bool(sitio) and sitio.lower() in p.concepto.lower() and abs(dias) <= 6
             salida.append(p)
     return salida
 
@@ -93,7 +98,7 @@ def dia(fecha, hoy, borrador=None):
     reales, previstos = dinero_por_dia(hoy)
     return {
         "borrador": borrador,
-        "marcar": para_marcar(borrador.fecha if borrador else fecha, borrador.sitio if borrador else ""),
+        "marcar": para_marcar(borrador.fecha, borrador.sitio, borrador) if borrador else [],
         "fecha": fecha, "nombre": DIAS_LARGOS[fecha.weekday()],
         "mes_nombre": MESES[fecha.month - 1],
         "eventos": Evento.objects.filter(fecha=fecha),

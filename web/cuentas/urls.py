@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import tema, views
 
 urlpatterns = [
     path("", views.calendario, name="calendario"),
@@ -19,8 +19,10 @@ urlpatterns = [
     path("moviles/<int:pk>/borrar/", views.borrar_movil, name="borrar_movil"),
     path("ticket/", views.leer_ticket, name="leer_ticket"),
     path("ticket/<int:pk>/guardar/", views.guardar_ticket, name="guardar_ticket"),
+    path("ticket/<int:pk>/releer/", views.releer_ticket, name="releer_ticket"),
     path("ticket/<int:pk>/borrar/", views.borrar_ticket, name="borrar_ticket"),
     path("ticket/<int:pk>/archivo/", views.archivo_ticket, name="archivo_ticket"),
+    path("tema/", tema.cambiar, name="tema"),
     path("evento/", views.nuevo_evento, name="nuevo_evento"),
     path("evento/<int:pk>/hecho/", views.evento_hecho, name="evento_hecho"),
     path("evento/<int:pk>/borrar/", views.borrar_evento, name="borrar_evento"),

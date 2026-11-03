@@ -4,3 +4,5 @@ gunicorn==26.2.0
 sqlparse==0.6.0
 whitenoise==6.12.0
 segno==1.6.6
+numpy==2.5.4
+pillow==13.0.0

@@ -17,7 +17,7 @@ Las capturas son de la demo, con datos inventados.
 ## Cómo funciona
 
 1. **Haces la foto.** Con la app Android o desde el navegador del móvil, que vale también para iPhone. Puedes mandar una foto, una captura de pantalla como las de Google Wallet o el PDF de un ticket digital.
-2. **El PC lo lee.** Con Tesseract saca el total, la fecha, la tienda y cada producto con su precio.
+2. **El PC lo lee.** Con Tesseract saca el total, la fecha, la tienda y cada producto con su precio. Si algo no le cuadra y tienes [Ollama](https://ollama.com) con `qwen2.5vl:7b`, le pide una segunda opinión, todo en tu PC.
 3. **Lo revisas.** El ticket aparece en el calendario como pendiente. Compruebas el total, eliges de qué es y qué productos son capricho. Si corriges alguno, se acuerda para la próxima vez.
 4. **Se apunta.** Pasa al calendario como gastado ese día y tacha lo que tenías previsto que pagaba, por ejemplo la compra de esa semana.
 

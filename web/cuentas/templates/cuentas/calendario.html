@@ -1,5 +1,5 @@
 {% load static euros %}<!doctype html>
-<html lang="es">
+<html lang="es" data-modo="{{ tema_modo }}" data-color="{{ tema_color }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=Instrument+Serif:ital@0;1&display=swap">
-<link rel="stylesheet" href="{% static 'cuentas/calendario.css' %}?v=11">
+<link rel="stylesheet" href="{% static 'cuentas/calendario.css' %}?v=13">
 </head>
 <body>
 
@@ -19,6 +19,7 @@
     <a href="{% url 'mes' %}">Plan</a>
     <a href="{% url 'moviles' %}">Móviles</a>
   </nav>
+  {% include 'cuentas/_tema.html' %}
 </header>
 
 <section class="titular">
@@ -160,7 +161,7 @@
       {% if dia.reales or dia.previstos %}
       <div class="movs">
         {% for g in dia.reales %}
-        <div class="mov"><span><b class="tag real">{{ g.partida }}</b>{{ g.concepto }}{% if g.ticket.archivo %} <a class="mini-link" href="{% url 'archivo_ticket' g.ticket.pk %}" target="_blank">ticket</a>{% endif %}</span><span class="der"><span class="din real">−{{ g.importe|euros }}</span>{% if g.ticket %}<form method="post" action="{% url 'borrar_ticket' g.ticket.pk %}">{% csrf_token %}<button class="quitar" aria-label="Borrar gasto">×</button></form>{% endif %}</span></div>
+        <div class="mov"><span><b class="tag real">{{ g.partida }}</b>{{ g.concepto }}{% if g.ticket %} <a class="mini-link" href="/?ticket={{ g.ticket.pk }}&m={{ g.ticket.fecha|date:'Y-m' }}">editar</a>{% endif %}{% if g.ticket.archivo %} <a class="mini-link" href="{% url 'archivo_ticket' g.ticket.pk %}" target="_blank">ticket</a>{% endif %}</span><span class="der"><span class="din real">−{{ g.importe|euros }}</span>{% if g.ticket %}<form method="post" action="{% url 'borrar_ticket' g.ticket.pk %}">{% csrf_token %}<button class="quitar" aria-label="Borrar gasto">×</button></form>{% endif %}</span></div>
         {% endfor %}
         {% for g in dia.previstos %}
         <div class="mov"><span><b class="tag {{ g.tipo }}">{{ g.tipo }}</b>{{ g.concepto }}</span><span class="din prev">{{ g.importe|euros }}</span></div>

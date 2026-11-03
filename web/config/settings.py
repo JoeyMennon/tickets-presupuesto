@@ -52,6 +52,7 @@ TEMPLATES = [
         "OPTIONS": {"context_processors": [
             "django.template.context_processors.request",
             "django.contrib.messages.context_processors.messages",
+            "cuentas.tema.contexto",
         ]},
     },
 ]

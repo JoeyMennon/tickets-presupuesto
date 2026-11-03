@@ -15,6 +15,7 @@ docker compose logs -f
 ```
 
 - `cuentas/lector.py` lee los tickets
+- `cuentas/vision.py` segunda opinión con Ollama, opcional
 - `cuentas/clasificador.py` decide qué es capricho
 - `cuentas/llave.py` filtra lo que llega de la wifi
 - `despliegue/` certificado, cortafuegos y servicios de systemd si no quieres Docker

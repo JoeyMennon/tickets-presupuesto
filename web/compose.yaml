@@ -15,7 +15,7 @@ services:
   web:
     <<: *comun
     # solo desde el pc
-    command: sh -c "python manage.py migrate --noinput && exec gunicorn config.wsgi:application --bind 127.0.0.1:8767 --workers 2 --timeout 60 --access-logfile - --error-logfile -"
+    command: sh -c "python manage.py migrate --noinput && exec gunicorn config.wsgi:application --bind 127.0.0.1:8767 --workers 2 --timeout 180 --access-logfile - --error-logfile -"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8767/api/ping/', timeout=5)"]
       interval: 1m
@@ -25,7 +25,7 @@ services:
   movil:
     <<: *comun
     # la de los móviles, con https
-    command: gunicorn config.wsgi:application --bind 0.0.0.0:8768 --certfile datos/tls/cert.pem --keyfile datos/tls/clave.pem --workers 1 --timeout 120 --access-logfile - --error-logfile -
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8768 --certfile datos/tls/cert.pem --keyfile datos/tls/clave.pem --workers 1 --timeout 240 --access-logfile - --error-logfile -
     depends_on:
       web:
         condition: service_started

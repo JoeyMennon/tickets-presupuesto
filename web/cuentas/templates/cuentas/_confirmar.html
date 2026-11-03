@@ -1,34 +1,86 @@
-{% load euros %}<form class="confirmar" method="post" action="{% url 'guardar_ticket' t.pk %}">
+{% load euros %}<form class="confirmar{% if t.confirmado %} editando{% endif %}" method="post" action="{% url 'guardar_ticket' t.pk %}">
   {% csrf_token %}
   {% if volver %}<input type="hidden" name="volver" value="{{ volver }}">{% endif %}
-  <p class="eti">{% if t.archivo %}ticket leído, revísalo{% else %}gasto nuevo{% endif %}</p>
-  {% if t.archivo %}<a class="ver-ticket" href="{% url 'archivo_ticket' t.pk %}" target="_blank">Ver el ticket ›</a>{% endif %}
-  {% if t.archivo and not t.importe %}<p class="nota">No he podido leer el total. Ponlo tú.</p>{% endif %}
-  <div class="campos">
-    <label class="grande">Total<input name="importe" inputmode="decimal" value="{{ t.importe|coma }}" placeholder="0,00" required autocomplete="off"></label>
-    <label>Día<input type="date" name="fecha" value="{{ t.fecha|date:'Y-m-d' }}"></label>
-    <label>Sitio<input name="sitio" value="{{ t.sitio }}" placeholder="Mercadona, la cafetería…" autocomplete="off"></label>
+  <div class="conf-cab">
+    <p class="eti">{% if t.confirmado %}editar gasto{% elif t.archivo %}ticket leído, revísalo{% else %}gasto nuevo{% endif %}</p>
+    {% if t.archivo %}
+    <span class="conf-enlaces">
+      <a href="{% url 'archivo_ticket' t.pk %}" target="_blank">Ver el ticket</a>
+      <button class="enlace" formaction="{% url 'releer_ticket' t.pk %}" formnovalidate>Volver a leer</button>
+    </span>
+    {% endif %}
   </div>
-  <p class="pregunta">¿De qué es?</p>
-  <div class="chips">
-    {% for p in partidas_ticket %}<label class="chip"><input type="radio" name="partida" value="{{ p }}" {% if p == t.partida %}checked{% endif %}><span>{{ p }}</span></label>{% endfor %}
-  </div>
+  {% if t.archivo and t.importe is None %}<p class="aviso-leve">No he podido leer el total. Ponlo tú.</p>{% endif %}
+  {% if t.dudas %}<p class="aviso-leve">{{ t.dudas }}</p>{% endif %}
+
+  <fieldset class="paso">
+    <legend><span>1</span>Cuánto y dónde</legend>
+    <div class="campos">
+      <label class="grande">Total<input name="importe" inputmode="decimal" value="{{ t.importe|coma }}" placeholder="0,00" required autocomplete="off" data-total></label>
+      <label>Día<input type="date" name="fecha" value="{{ t.fecha|date:'Y-m-d' }}"></label>
+      <label>Sitio<input name="sitio" value="{{ t.sitio }}" placeholder="Mercadona, la cafetería…" autocomplete="off"></label>
+    </div>
+  </fieldset>
+
+  <fieldset class="paso">
+    <legend><span>2</span>De qué es</legend>
+    <div class="chips">
+      {% for p in partidas_ticket %}<label class="chip"><input type="radio" name="partida" value="{{ p }}" {% if p == t.partida %}checked{% endif %}><span>{{ p }}</span></label>{% endfor %}
+    </div>
+  </fieldset>
+
   {% with lineas=t.lineas.all %}{% if lineas %}
-  <p class="pregunta">¿Qué es capricho?</p>
-  <div class="chips lineas">
-    {% for l in lineas %}<label class="chip"><input type="checkbox" name="capricho" value="{{ l.pk }}" {% if l.capricho %}checked{% endif %}><span>{{ l.nombre|lower|capfirst }} <small>{{ l.importe|euros }}</small></span></label>{% endfor %}
-  </div>
-  <p class="nota">Lo marcado va a Caprichos y el resto a la partida de arriba. Si cambias alguno, me acuerdo para la próxima.</p>
+  <fieldset class="paso">
+    <legend><span>3</span>Qué es capricho</legend>
+    <div class="chips lineas">
+      {% for l in lineas %}<label class="chip"><input type="checkbox" name="capricho" value="{{ l.pk }}" data-importe="{{ l.importe|stringformat:'s' }}" {% if l.capricho %}checked{% endif %}><span>{{ l.nombre|lower|capfirst }} <small>{{ l.importe|euros }}</small></span></label>{% endfor %}
+    </div>
+    <p class="nota">Lo marcado va a Caprichos y el resto a la partida de arriba. Si cambias alguno, me acuerdo para la próxima.</p>
+  </fieldset>
   {% endif %}{% endwith %}
+
   {% if marcar %}
-  <p class="pregunta">¿Qué cosas del plan has pagado con esto?</p>
-  <div class="chips plan">
-    {% for p in marcar %}<label class="chip {{ p.tipo }}"><input type="checkbox" name="cubre" value="{{ p.clave }}" {% if p.marcado %}checked{% endif %}><span>{{ p.concepto }} <small>{{ p.dia|date:'d/m' }} · {{ p.importe|euros }}</small></span></label>{% endfor %}
-  </div>
-  <p class="nota">Lo que marques deja de contar como previsto. Si no es nada del plan, no marques nada.</p>
+  <fieldset class="paso">
+    <legend><span>{% if t.lineas.exists %}4{% else %}3{% endif %}</span>Qué cosas del plan cubre</legend>
+    <div class="chips plan">
+      {% for p in marcar %}<label class="chip {{ p.tipo }}"><input type="checkbox" name="cubre" value="{{ p.clave }}" {% if p.marcado %}checked{% endif %}><span>{{ p.concepto }} <small>{{ p.dia|date:'d/m' }} · {{ p.importe|euros }}</small></span></label>{% endfor %}
+    </div>
+    <p class="nota">Lo que marques deja de contar como previsto. Si no es nada del plan, no marques nada.</p>
+  </fieldset>
   {% endif %}
+
+  <p class="reparto" data-reparto aria-live="polite"></p>
+
   <div class="botones">
     <button class="anadir">Guardar</button>
+    {% if t.confirmado %}
+    <a class="descartar" href="{% if volver == 'movil' %}/movil/{% else %}/?d={{ t.fecha|date:'Y-m-d' }}&m={{ t.fecha|date:'Y-m' }}{% endif %}">Cancelar</a>
+    <button class="descartar peligro" formaction="{% url 'borrar_ticket' t.pk %}" formnovalidate>Borrar gasto</button>
+    {% else %}
     <button class="descartar" formaction="{% url 'borrar_ticket' t.pk %}" formnovalidate>Descartar</button>
+    {% endif %}
   </div>
 </form>
+<script>
+// reparto en vivo: cuánto va a la partida y cuánto a caprichos
+(function () {
+  const f = document.currentScript.previousElementSibling;
+  const num = v => parseFloat(String(v || "").replace("€", "").replace(/\s/g, "").replace(",", ".")) || 0;
+  const eur = n => n.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+  function pintar() {
+    const total = num(f.querySelector("[data-total]").value);
+    const partida = (f.querySelector("input[name=partida]:checked") || {}).value || "Otro";
+    let capricho = 0;
+    f.querySelectorAll("input[name=capricho]:checked").forEach(c => capricho += num(c.dataset.importe));
+    capricho = Math.min(capricho, Math.max(total, 0));
+    const salida = f.querySelector("[data-reparto]");
+    if (!total) { salida.textContent = ""; return; }
+    if (partida === "Caprichos" || !capricho) { salida.innerHTML = "<b>" + eur(total) + "</b> a " + partida; return; }
+    const resto = total - capricho;
+    salida.innerHTML = (resto > 0 ? "<b>" + eur(resto) + "</b> a " + partida + " · " : "") + "<b>" + eur(capricho) + "</b> a Caprichos";
+  }
+  f.addEventListener("input", pintar);
+  f.addEventListener("change", pintar);
+  pintar();
+})();
+</script>

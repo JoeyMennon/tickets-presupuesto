@@ -19,7 +19,7 @@ from django.views.decorators.http import require_POST
 from . import clasificador, calendario as cal
 from . import compra as plan_compra
 from . import lector
-from .models import CERO, Evento, Mes, Movil, Previsto, Ticket
+from .models import CERO, Evento, Mes, Movil, Previsto, Ticket, Tienda
 
 def _importe(texto):
     # vale '3,91', '3.91' o '3,91 €'
@@ -182,7 +182,7 @@ def _mes(texto, defecto):
 def calendario(request):
     hoy = date.today()
     Ticket.objects.filter(confirmado=False, origen="web", creado__lt=timezone.now() - timedelta(days=1)).delete()
-    borrador = Ticket.objects.filter(pk=request.GET.get("ticket") or 0, confirmado=False).first()
+    borrador = Ticket.objects.filter(pk=request.GET.get("ticket") or 0).first()
     elegido = (borrador.fecha if borrador else None) or _fecha(request.GET.get("d")) or hoy
     primero = _mes(request.GET.get("m"), elegido.replace(day=1))
     vista = "anio" if request.GET.get("vista") == "anio" else "mes"
@@ -190,7 +190,7 @@ def calendario(request):
         "hoy": hoy, "vista": vista, "colores": Evento.COLORES, "dias_cab": cal.DIAS,
         "mes": cal.mes(primero.year, primero.month, hoy, elegido),
         "dia": cal.dia(elegido, hoy, borrador), "resumen": plan_compra.resumen(Mes.actual()),
-        "partidas_ticket": Ticket.PARTIDAS,
+        "partidas_ticket": Ticket.partidas(borrador.partida if borrador else ""),
         "por_revisar": Ticket.objects.filter(confirmado=False, origen="movil"),
     }
     if vista == "anio":
@@ -246,7 +246,8 @@ def _importe_con_signo(texto):
 
 def _leer(t, fecha):
     leido = lector.leer(t.archivo.path, fecha)
-    t.texto = leido["texto"][:5000]
+    t.texto = leido["texto"][:8000]
+    t.dudas = leido["dudas"][:300]
     t.importe = leido["importe"]
     t.sitio = leido["sitio"]
     t.partida = leido["partida"]
@@ -278,12 +279,12 @@ def guardar_ticket(request, pk):
     if importe is None:
         messages.error(request, "Pon el total del ticket, por ejemplo 12,40.")
         if request.POST.get("volver") == "movil":
-            return redirect("/movil/")
+            return redirect(f"/movil/?editar={t.pk}" if t.confirmado else "/movil/")
         return redirect(f"/?ticket={t.pk}&m={t.fecha:%Y-%m}")
     t.fecha = _fecha(request.POST.get("fecha")) or t.fecha
     t.sitio = request.POST.get("sitio", "").strip()[:60]
     partida = request.POST.get("partida")
-    t.partida = partida if partida in Ticket.PARTIDAS else "Otro"
+    t.partida = partida if partida in Ticket.partidas(t.partida) else "Otro"
     t.importe = importe
     marcadas = set(request.POST.getlist("capricho"))
     for linea in t.lineas.all():
@@ -295,8 +296,30 @@ def guardar_ticket(request, pk):
     t.capricho = sum((l.importe for l in t.lineas.filter(capricho=True)), CERO)
     t.cubre = "\n".join(request.POST.getlist("cubre"))
     t.confirmado = True
+    t.dudas = ""
     t.save()
+    _aprender_tienda(t)
     return _volver(t.fecha, request)
+
+
+def _aprender_tienda(t):
+    # la próxima vez que salga este CIF o este nombre, ya sé qué es
+    if not t.texto or not t.sitio:
+        return
+    for clave in lector.claves_tienda(t.texto.split("\n\n---\n\n")[0]):
+        Tienda.objects.update_or_create(clave=clave, defaults={"nombre": t.sitio, "partida": t.partida})
+
+
+@require_POST
+def releer_ticket(request, pk):
+    t = get_object_or_404(Ticket, pk=pk)
+    if t.archivo:
+        _leer(t, t.fecha)
+        t.save()
+        messages.success(request, "Ticket leído otra vez. Revisa que esté bien.")
+    if request.POST.get("volver") == "movil":
+        return redirect(f"/movil/?editar={t.pk}")
+    return redirect(f"/?ticket={t.pk}&m={t.fecha:%Y-%m}")
 
 
 @require_POST
@@ -349,13 +372,30 @@ def movil(request):
     pendientes = []
     for t in Ticket.objects.filter(confirmado=False, origen="movil").order_by("-creado"):
         pendientes.append({"t": t, "marcar": cal.para_marcar(t.fecha, t.sitio)})
-    hechos = Ticket.objects.filter(confirmado=True).order_by("-fecha", "-creado")[:8]
+    editando = Ticket.objects.filter(pk=request.GET.get("editar") or 0, confirmado=True).first()
+    if editando:
+        pendientes = [{"t": editando, "marcar": cal.para_marcar(editando.fecha, editando.sitio, editando)}]
+    resumen = plan_compra.resumen(Mes.actual())
     return render(request, "cuentas/movil.html", {
-        "pendientes": pendientes, "hechos": hechos, "hoy": hoy,
-        "resumen": plan_compra.resumen(Mes.actual()), "partidas_ticket": Ticket.PARTIDAS,
+        "pendientes": pendientes, "editando": editando, "dias": _gastos_por_dia(hoy), "hoy": hoy,
+        "resumen": resumen, "partidas_ticket": Ticket.partidas(editando.partida if editando else ""),
         "android": "android" in request.headers.get("User-Agent", "").lower(),
         "enlace_app": _enlace_app(_llave_de(request)),
     })
+
+
+def _gastos_por_dia(hoy, dias=21):
+    desde = hoy - timedelta(days=dias)
+    grupos = {}
+    for t in Ticket.objects.filter(confirmado=True, fecha__gte=desde).order_by("-fecha", "-creado"):
+        g = grupos.setdefault(t.fecha, {"fecha": t.fecha, "tickets": [], "total": CERO})
+        g["tickets"].append(t)
+        g["total"] += t.importe or CERO
+    salida = list(grupos.values())
+    for g in salida:
+        atras = (hoy - g["fecha"]).days
+        g["nombre"] = {0: "Hoy", 1: "Ayer"}.get(atras) or f"{cal.DIAS_LARGOS[g['fecha'].weekday()]} {g['fecha'].day}"
+    return salida
 
 
 def movil_manifest(request):

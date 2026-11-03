@@ -108,6 +108,7 @@ class Ticket(models.Model):
     cubre = models.TextField(blank=True, help_text="Claves de lo previsto que paga este ticket, una por línea")
     archivo = models.FileField(upload_to="tickets/", blank=True)
     texto = models.TextField(blank=True, help_text="Lo que se ha leído del ticket")
+    dudas = models.CharField(max_length=300, blank=True, help_text="Lo que el lector no tiene claro")
     confirmado = models.BooleanField(default=False)
     origen = models.CharField(max_length=10, default="web")
     uid = models.CharField(max_length=64, unique=True, null=True, blank=True, help_text="Id que pone la app del móvil")
@@ -118,6 +119,13 @@ class Ticket(models.Model):
 
     def __str__(self):
         return f"{self.fecha} {self.sitio} {self.importe}"
+
+    @classmethod
+    def partidas(cls, tambien=""):
+        # las de serie más las que ya se han usado, para no perderlas al editar
+        usadas = cls.objects.exclude(partida__in=cls.PARTIDAS).values_list("partida", flat=True).distinct()
+        extra = sorted({p for p in usadas if p} | ({tambien} if tambien and tambien not in cls.PARTIDAS else set()))
+        return cls.PARTIDAS + extra
 
     def claves(self):
         return [c for c in self.cubre.splitlines() if c]
@@ -149,6 +157,17 @@ class Producto(models.Model):
 
     def __str__(self):
         return f"{self.clave}: {'capricho' if self.capricho else 'comida'}"
+
+
+class Tienda(models.Model):
+    # aprendida de lo que corriges: por CIF o por cómo sale el nombre en el ticket
+
+    clave = models.CharField(max_length=80, unique=True)
+    nombre = models.CharField(max_length=60)
+    partida = models.CharField(max_length=30)
+
+    def __str__(self):
+        return f"{self.clave}: {self.nombre} ({self.partida})"
 
 
 class Movil(models.Model):

@@ -1,0 +1,15 @@
+<details class="tema">
+  <summary aria-label="Cambiar el tema"><span class="tema-bola"></span><span class="tema-txt">Tema</span></summary>
+  <form class="tema-panel" method="post" action="{% url 'tema' %}">
+    {% csrf_token %}
+    <input type="hidden" name="siguiente" value="{{ request.get_full_path }}">
+    <p class="eti">fondo</p>
+    <div class="tema-modos">
+      {% for valor, nombre in tema_modos %}<button name="modo" value="{{ valor }}" class="{% if valor == tema_modo %}activo{% endif %}">{{ nombre }}</button>{% endfor %}
+    </div>
+    <p class="eti">color</p>
+    <div class="tema-colores">
+      {% for valor, nombre in tema_colores %}<button name="color" value="{{ valor }}" class="t-{{ valor }}{% if valor == tema_color %} activo{% endif %}" title="{{ nombre }}" aria-label="{{ nombre }}"></button>{% endfor %}
+    </div>
+  </form>
+</details>

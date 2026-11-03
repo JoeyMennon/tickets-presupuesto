@@ -4,15 +4,19 @@ def tickets_del_mes(mes):
     return Ticket.objects.filter(confirmado=True, fecha__gte=mes.inicio, fecha__lt=mes.cobro)
 
 
-def cubiertos():
-    return {c for t in Ticket.objects.filter(confirmado=True).exclude(cubre="") for c in t.claves()}
+def cubiertos(excepto=None):
+    tickets = Ticket.objects.filter(confirmado=True).exclude(cubre="")
+    if excepto is not None:
+        tickets = tickets.exclude(pk=excepto.pk)
+    return {c for t in tickets for c in t.claves()}
 
 
-def pendientes(mes=None):
+def pendientes(mes=None, excepto=None):
+    # excepto: al editar un ticket, lo que ya cubre ese ticket sigue saliendo
     mes = mes or Mes.actual()
     if mes is None:
         return []
-    hechos = cubiertos()
+    hechos = cubiertos(excepto)
     return [p for p in mes.previstos.filter(pagado=False) if p.clave not in hechos]
 
 
