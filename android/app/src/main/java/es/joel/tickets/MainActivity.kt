@@ -16,6 +16,7 @@ import android.webkit.SslErrorHandler
 import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -81,15 +82,28 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
-// mismos colores que la web
+// mismos colores que la web: fondo, papel, línea, acento y fondo del acento, en claro y en oscuro
 private class Paleta(val fondo: Color, val papel: Color, val tinta: Color, val suave: Color,
                      val linea: Color, val acento: Color, val acentoFondo: Color,
-                     val salvia: Color, val salviaFondo: Color)
+                     val salvia: Color, val salviaFondo: Color, val sobreAcento: Color, val oscura: Boolean)
 
-private val Clara = Paleta(Color(0xFFF6F1EA), Color(0xFFFFFCF7), Color(0xFF2D2926), Color(0xFF8B827A),
-    Color(0xFFEBE3D8), Color(0xFFC48577), Color(0xFFF6E4DE), Color(0xFF4B6646), Color(0xFFE5EDE2))
-private val Oscura = Paleta(Color(0xFF191716), Color(0xFF221F1D), Color(0xFFEFE8E0), Color(0xFFA1978E),
-    Color(0xFF34302C), Color(0xFFE0A294), Color(0xFF3A2A26), Color(0xFFB9D1B3), Color(0xFF2B3529))
+private val TONOS = mapOf(
+    "rosa" to (listOf(0xFFF6F1EA, 0xFFFFFCF7, 0xFFEBE3D8, 0xFFC48577, 0xFFF6E4DE) to listOf(0xFF191716, 0xFF221F1D, 0xFF34302C, 0xFFE0A294, 0xFF3A2A26)),
+    "salvia" to (listOf(0xFFEFF3EC, 0xFFFBFDF9, 0xFFDFE7DA, 0xFF5F8159, 0xFFE0EADC) to listOf(0xFF151A16, 0xFF1D231E, 0xFF2D362E, 0xFFA9C7A2, 0xFF26302A)),
+    "lavanda" to (listOf(0xFFF2F0F8, 0xFFFDFCFF, 0xFFE3DFEF, 0xFF7A6BB3, 0xFFE9E4F6) to listOf(0xFF17161D, 0xFF1F1D27, 0xFF312E3D, 0xFFBCAEEA, 0xFF2C2740)),
+    "cielo" to (listOf(0xFFEEF3F7, 0xFFFBFDFF, 0xFFDCE6EE, 0xFF4F7FA3, 0xFFDEEBF5) to listOf(0xFF141A1F, 0xFF1B2229, 0xFF2B3540, 0xFF9CC3E2, 0xFF1F2E3A)),
+    "miel" to (listOf(0xFFF7F2E7, 0xFFFFFDF7, 0xFFECE2CC, 0xFFA87A2C, 0xFFF6ECD5) to listOf(0xFF1A1814, 0xFF221F19, 0xFF36302A, 0xFFE2BF7A, 0xFF372D1C)),
+)
+private val MUESTRA = mapOf("rosa" to 0xFFC48577, "salvia" to 0xFF6F8F69, "lavanda" to 0xFF8B7CC0, "cielo" to 0xFF5F8DB0, "miel" to 0xFFC99A45)
+
+private fun paleta(oscura: Boolean, color: String): Paleta {
+    val (clara, noche) = TONOS[color] ?: TONOS.getValue("rosa")
+    val t = (if (oscura) noche else clara).map { Color(it) }
+    return if (oscura) Paleta(t[0], t[1], Color(0xFFEFE8E0), Color(0xFFA89E95), t[2], t[3], t[4],
+        Color(0xFFB9D1B3), Color(0xFF2B3529), Color(0xFF1A1716), true)
+    else Paleta(t[0], t[1], Color(0xFF2D2926), Color(0xFF7D746C), t[2], t[3], t[4],
+        Color(0xFF4B6646), Color(0xFFE5EDE2), Color.White, false)
+}
 
 @OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
 private val Sans = FontFamily(
@@ -156,8 +170,19 @@ private fun Pantalla(
     abrirRevisar: androidx.compose.runtime.MutableState<Boolean>,
     conectada: androidx.compose.runtime.MutableState<Int>,
 ) {
-    val p = if (isSystemInDarkTheme()) Oscura else Clara
     val c = LocalContext.current
+    var modo by remember { mutableStateOf(Ajustes.modo(c)) }
+    var color by remember { mutableStateOf(Ajustes.color(c)) }
+    var eligiendoTema by remember { mutableStateOf(false) }
+    val sistemaOscuro = isSystemInDarkTheme()
+    val p = paleta(if (modo == "auto") sistemaOscuro else modo == "oscuro", color)
+    fun cambiarTema(m: String, col: String) { modo = m; color = col; Ajustes.tema(c, m, col) }
+    // iconos de la barra de arriba a juego con el tema elegido
+    LaunchedEffect(p.oscura) {
+        val estilo = if (p.oscura) SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+        else SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
+        (actividad as ComponentActivity).enableEdgeToEdge(estilo, estilo)
+    }
     val conexion = remember(conectada.value) { Ajustes.conexion(c) }
     val scope = rememberCoroutineScope()
 
@@ -217,7 +242,17 @@ private fun Pantalla(
 
     val ip = estado?.ip
     if (abrirRevisar.value && ip != null && conexion != null) {
-        Revisar(p, "${Pc.direccion(c, ip)}/movil/?k=${Uri.encode(conexion.llave)}") { abrirRevisar.value = false; refrescar() }
+        val base = Pc.direccion(c, ip)
+        Revisar(p, base, "$base/movil/?k=${Uri.encode(conexion.llave)}", modo, color) {
+            // si ha cambiado el tema en la web, la app se queda con él
+            val galletas = CookieManager.getInstance().getCookie(base).orEmpty()
+            val leer = { n: String -> Regex("(?:^|; )$n=([a-z]+)").find(galletas)?.groupValues?.get(1) }
+            val m = leer("modo")?.takeIf { v -> Ajustes.MODOS.any { it.first == v } } ?: modo
+            val col = leer("color")?.takeIf { it in Ajustes.COLORES } ?: color
+            if (m != modo || col != color) cambiarTema(m, col)
+            abrirRevisar.value = false
+            refrescar()
+        }
         return
     }
 
@@ -236,7 +271,20 @@ private fun Pantalla(
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("✦ ", style = texto.copy(color = p.acento))
-                Text("agenda & cuentas", style = texto.copy(fontFamily = Serif, fontStyle = FontStyle.Italic, fontSize = 20.sp))
+                Text("agenda & cuentas", style = texto.copy(fontFamily = Serif, fontStyle = FontStyle.Italic, fontSize = 20.sp), modifier = Modifier.weight(1f))
+                Row(
+                    Modifier.clip(RoundedCornerShape(50)).background(p.papel).border(1.dp, p.linea, RoundedCornerShape(50))
+                        .clickable { eligiendoTema = !eligiendoTema }.padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(Modifier.size(16.dp).clip(CircleShape).background(p.acento))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Tema", style = texto.copy(fontSize = 13.sp, color = p.suave))
+                }
+            }
+            if (eligiendoTema) {
+                Spacer(Modifier.height(12.dp))
+                ElegirTema(p, texto, modo, color) { m, col -> cambiarTema(m, col) }
             }
             Spacer(Modifier.height(18.dp))
             Text("tickets", style = texto.copy(fontFamily = Serif, fontStyle = FontStyle.Italic, fontSize = 64.sp, lineHeight = 60.sp))
@@ -249,12 +297,12 @@ private fun Pantalla(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(p.acento)
                     .clickable { escanear() }.padding(22.dp),
             ) {
-                Text("✦", style = texto.copy(color = Color.White, fontSize = 22.sp))
+                Text("✦", style = texto.copy(color = p.sobreAcento, fontSize = 22.sp))
                 Spacer(Modifier.height(18.dp))
-                Text("Escanear ticket", style = texto.copy(color = Color.White, fontFamily = Serif, fontSize = 34.sp))
+                Text("Escanear ticket", style = texto.copy(color = p.sobreAcento, fontFamily = Serif, fontSize = 34.sp))
                 Text(
                     "Se guarda aquí y se pasa solo al PC cuando estés en casa.",
-                    style = texto.copy(color = Color.White.copy(alpha = .85f), fontSize = 14.sp),
+                    style = texto.copy(color = p.sobreAcento.copy(alpha = .85f), fontSize = 14.sp),
                 )
             }
         }
@@ -273,7 +321,10 @@ private fun Pantalla(
             item {
                 Tarjeta(p, Modifier.clickable { abrirRevisar.value = true }) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Ver el presupuesto y los últimos gastos", style = texto, modifier = Modifier.weight(1f))
+                        Column(Modifier.weight(1f)) {
+                            Text("Presupuesto y gastos", style = texto.copy(fontFamily = Serif, fontSize = 24.sp))
+                            Text("Ver lo que queda y cambiar cualquier gasto", style = texto.copy(color = p.suave, fontSize = 13.sp))
+                        }
                         Text("›", style = texto.copy(color = p.acento, fontSize = 22.sp))
                     }
                 }
@@ -402,7 +453,7 @@ private fun Miniatura(archivo: File, p: Paleta) {
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-private fun Revisar(p: Paleta, url: String, volver: () -> Unit) {
+private fun Revisar(p: Paleta, base: String, url: String, modo: String, color: String, volver: () -> Unit) {
     BackHandler { volver() }
     Column(Modifier.fillMaxSize().background(p.fondo).safeDrawingPadding()) {
         Row(
@@ -414,7 +465,12 @@ private fun Revisar(p: Paleta, url: String, volver: () -> Unit) {
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
-                CookieManager.getInstance().setAcceptCookie(true)
+                CookieManager.getInstance().apply {
+                    setAcceptCookie(true)
+                    setCookie(base, "modo=$modo; Max-Age=31536000; Path=/; SameSite=Lax")
+                    setCookie(base, "color=$color; Max-Age=31536000; Path=/; SameSite=Lax")
+                    flush()
+                }
                 WebView(ctx).apply {
                     setBackgroundColor(android.graphics.Color.TRANSPARENT)
                     settings.javaScriptEnabled = true
@@ -429,6 +485,40 @@ private fun Revisar(p: Paleta, url: String, volver: () -> Unit) {
                 }
             },
         )
+    }
+}
+
+@Composable
+private fun ElegirTema(p: Paleta, texto: TextStyle, modo: String, color: String, elegir: (String, String) -> Unit) {
+    Tarjeta(p) {
+        Text("FONDO", style = etiqueta(texto, p))
+        Spacer(Modifier.height(8.dp))
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.fondo).padding(3.dp)) {
+            Ajustes.MODOS.forEach { (valor, nombre) ->
+                val activo = valor == modo
+                Box(
+                    Modifier.weight(1f).clip(RoundedCornerShape(11.dp)).background(if (activo) p.tinta else Color.Transparent)
+                        .clickable { elegir(valor, color) }.padding(vertical = 10.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(nombre, style = texto.copy(fontSize = 13.sp, color = if (activo) p.papel else p.suave,
+                        fontWeight = if (activo) FontWeight.SemiBold else FontWeight.Normal))
+                }
+            }
+        }
+        Spacer(Modifier.height(14.dp))
+        Text("COLOR", style = etiqueta(texto, p))
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Ajustes.COLORES.forEach { valor ->
+                Box(
+                    Modifier.size(40.dp).clip(CircleShape)
+                        .border(if (valor == color) 3.dp else 1.dp, if (valor == color) p.tinta else p.linea, CircleShape)
+                        .padding(5.dp).clip(CircleShape).background(Color(MUESTRA.getValue(valor)))
+                        .clickable { elegir(modo, valor) },
+                )
+            }
+        }
     }
 }
 

@@ -37,4 +37,12 @@ object Ajustes {
     }
 
     fun nuevaIp(c: Context, ip: String) = prefs(c).edit().putString("ip", ip).apply()
+
+    // tema: modo auto, claro u oscuro y color; el mismo que la web
+    val MODOS = listOf("auto" to "Automático", "claro" to "Claro", "oscuro" to "Oscuro")
+    val COLORES = listOf("rosa", "salvia", "lavanda", "cielo", "miel")
+
+    fun modo(c: Context) = prefs(c).getString("modo", "auto").takeIf { m -> MODOS.any { it.first == m } } ?: "auto"
+    fun color(c: Context) = prefs(c).getString("color", "rosa").takeIf { it in COLORES } ?: "rosa"
+    fun tema(c: Context, modo: String, color: String) = prefs(c).edit().putString("modo", modo).putString("color", color).apply()
 }

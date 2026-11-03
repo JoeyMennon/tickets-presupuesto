@@ -85,7 +85,7 @@ object Pc {
         val con = abrir(c, "${direccion(c, ip)}/api/ticket/")
         return try {
             con.connectTimeout = 4000
-            con.readTimeout = 90000
+            con.readTimeout = 180000
             con.doOutput = true
             con.requestMethod = "POST"
             con.setRequestProperty("X-Llave", llave(c))
